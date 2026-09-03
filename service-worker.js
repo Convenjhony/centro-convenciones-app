@@ -8,7 +8,7 @@
 // Si no cambiás este número, los usuarios van a seguir viendo la
 // versión vieja aunque subas archivos nuevos al repositorio.
 // =====================================================================
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [

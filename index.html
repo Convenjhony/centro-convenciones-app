@@ -1631,7 +1631,7 @@ const SALAS = [
       { id:'piso_osmosis', type:'check', label:'Limpieza de piso de sala' },
       { id:'insumos', type:'check', label:'Orden de insumos y materiales' },
       { id:'fugas', type:'check', label:'Revisión de fugas / goteos' },
-      { id:'recarga_lejia_50', type:'check', label:'Recarga de Lejía 50%' },
+      { id:'nivel_lejia_50', type:'value', inputType:'text', unit:'% restante en el bidón', label:'Nivel de Lejía 50%' },
     ]
   }
 ]
@@ -1780,7 +1780,7 @@ const SALAS = [
     title: '5 y 6. Controlar variadores y tablero general bombas',
     schedule: { period:'day' },
     items: [
-      { id:'control_variadores', type:'check', label:'Controlar variadores' },
+      { id:'control_variadores', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo (Nº variador - Zona - Fallo)', label:'Controlar variadores' },
       { id:'control_tablero_bombas', type:'check', label:'Controlar tablero general bombas' },
     ]
   },
@@ -1810,19 +1810,19 @@ const SALAS = [
     title: '10. Control de aljibes',
     schedule: { period:'day' },
     items: [
-      { id:'aljibe_dura', type:'check', label:'Aljibe — agua dura' },
-      { id:'aljibe_blanda', type:'check', label:'Aljibe — agua blanda' },
-      { id:'aljibe_riego', type:'check', label:'Aljibe — agua de riego' },
-      { id:'aljibe_salada', type:'check', label:'Aljibe — agua salada' },
+      { id:'aljibe_dura', type:'select', options:['Alto','Medio','Bajo'], noOtro: true, label:'Aljibe — agua dura' },
+      { id:'aljibe_blanda', type:'select', options:['Alto','Medio','Bajo'], noOtro: true, label:'Aljibe — agua blanda' },
+      { id:'aljibe_riego', type:'select', options:['Alto','Medio','Bajo'], noOtro: true, label:'Aljibe — agua de riego' },
+      { id:'aljibe_salada', type:'select', options:['Alto','Medio','Bajo'], noOtro: true, label:'Aljibe — agua salada' },
     ]
   },
   {
     title: '11. Control bombas de calor o enfriadoras',
     schedule: { period:'day' },
     items: [
-      { id:'bomba_calor_n3', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N3' },
-      { id:'bomba_calor_n4', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N4' },
-      { id:'bomba_calor_n5', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N5' },
+      { id:'bomba_calor_n3', type:'faultselect', options:['Correcto','Fallo','Apagado'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N3' },
+      { id:'bomba_calor_n4', type:'faultselect', options:['Correcto','Fallo','Apagado'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N4' },
+      { id:'bomba_calor_n5', type:'faultselect', options:['Correcto','Fallo','Apagado'], detailOption:'Fallo', detailLabel:'Código de fallo', label:'Bomba de calor / enfriadora N5' },
     ]
   },
   {
@@ -1888,7 +1888,8 @@ const SALAS = [
     title: '2. Recarga de insumos (semanal)',
     schedule: { period:'week', dayOfWeek:4 },
     items: [
-      { id:'recarga_sosa_caustica', type:'inventory', unit:'bolsas', initialStock:0, label:'Sosa cáustica' },
+      { id:'recarga_sosa_caustica', type:'inventory', unit:'bidones', initialStock:0, label:'Sosa cáustica' },
+      { id:'nivel_sosa_caustica', type:'value', inputType:'text', unit:'% restante en el bidón actual', label:'Nivel de Sosa Cáustica' },
     ]
   },
 ]
@@ -1951,7 +1952,7 @@ const SALAS = [
       { id:'cocina_clr', type:'value', inputType:'text', unit:'ppm · rango normal 0,2 – 1', label:'CLR (cloro libre residual)' },
       { id:'cocina_ph', type:'value', inputType:'text', unit:'rango normal 6,5 – 9', label:'pH' },
       { id:'cocina_temp_afc', type:'value', inputType:'text', unit:'°C · máx. 25', label:'Temperatura AFC (agua fría)' },
-      { id:'cocina_temp_acs', type:'value', inputType:'text', unit:'°C · mín. 50', label:'Temperatura ACS (agua caliente)' },
+      { id:'cocina_temp_acs', type:'value', inputType:'text', unit:'°C · mín. 50', label:'Temperatura ACS (agua caliente)', conditional: { dependsOn:'cocina_punto', hideWhen: (val) => typeof val === 'string' && val.startsWith('SOT 1.3-G'), note:'Este grifo es de agua fría exclusiva (bajo lavamanos), no tiene circuito de agua caliente' } },
       { id:'cocina_olor_sabor_color', type:'select', options: ['Correcto','Incorrecto'], noOtro: true, label:'Olor, sabor y color' },
       { id:'cocina_turbidez', type:'value', inputType:'text', unit:'UNF · máx. 4', label:'Turbidez' },
     ]
@@ -1964,10 +1965,10 @@ const SALAS = [
       { id:'terminal_clr', type:'value', inputType:'text', unit:'ppm · rango normal 0,2 – 1', label:'CLR (cloro libre residual)' },
       { id:'terminal_ph', type:'value', inputType:'text', unit:'rango normal 6,5 – 9', label:'pH' },
       { id:'terminal_temp_afc', type:'value', inputType:'text', unit:'°C · máx. 25', label:'Temperatura AFC (agua fría)' },
-      { id:'terminal_temp_acs', type:'value', inputType:'text', unit:'°C · mín. 50', label:'Temperatura ACS (agua caliente)', conditional: { dependsOn:'terminal_punto', hideWhen: (val) => typeof val === 'string' && val.startsWith('AZOTEA'), note:'La azotea no tiene circuito de agua caliente' } },
+      { id:'terminal_temp_acs', type:'value', inputType:'text', unit:'°C · mín. 50', label:'Temperatura ACS (agua caliente)', conditional: { dependsOn:'terminal_punto', hideWhen: (val) => typeof val === 'string' && (val.startsWith('AZOTEA') || val.startsWith('SOT 2-G2')), note:'Este punto no tiene circuito de agua caliente (azotea, o grifo de agua fría exclusiva)' } },
       { id:'terminal_turbidez_afc', type:'value', inputType:'text', unit:'UNF · máx. 4', label:'Turbidez AFC' },
       { id:'terminal_turbidez_acs', type:'value', inputType:'text', unit:'UNF · máx. 4', label:'Turbidez ACS' },
-      { id:'terminal_colector_ubicacion', type:'value', inputType:'text', unit:'Ej: Sala de máquinas, bicicletas', label:'CLR bloque/colector red — ubicación' },
+      { id:'terminal_colector_ubicacion', type:'select', options: ['Sala de máquinas', 'Zona Bicicletas'], noOtro: true, label:'CLR bloque/colector red — ubicación' },
       { id:'terminal_colector_clr', type:'value', inputType:'text', unit:'ppm · rango normal 0,2 – 0,5', label:'CLR bloque/colector red — valor' },
       { id:'terminal_aljibe_dura', type:'value', inputType:'text', unit:'°C · máx. 25', label:'Tª AFS — Aljibe agua dura' },
       { id:'terminal_aljibe_blanda', type:'value', inputType:'text', unit:'°C · máx. 25', label:'Tª AFS — Aljibe agua blanda' },
