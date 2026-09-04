@@ -1367,6 +1367,50 @@
         </span>
         <span class="settings-menu-arrow">→</span>
       </button>
+      <button type="button" id="changelogBtn" class="settings-menu-item">
+        <span class="settings-menu-icon">📋</span>
+        <span class="settings-menu-text">
+          <span class="settings-menu-title">Historial de cambios</span>
+          <span class="settings-menu-desc">Qué se actualizó en cada versión</span>
+        </span>
+        <span class="settings-menu-arrow">→</span>
+      </button>
+      <button type="button" id="checkUpdateBtn" class="settings-menu-item">
+        <span class="settings-menu-icon">🔄</span>
+        <span class="settings-menu-text">
+          <span class="settings-menu-title">Buscar actualizaciones</span>
+          <span class="settings-menu-desc" id="checkUpdateDesc">Revisar manualmente si hay una versión nueva</span>
+        </span>
+        <span class="settings-menu-arrow">→</span>
+      </button>
+      <button type="button" id="exportMigrationBtn" class="settings-menu-item">
+        <span class="settings-menu-icon">🔴↗️</span>
+        <span class="settings-menu-text">
+          <span class="settings-menu-title">Exportar datos</span>
+          <span class="settings-menu-desc">Descargar todo para migrar a otra app/dispositivo</span>
+        </span>
+        <span class="settings-menu-arrow">→</span>
+      </button>
+      <button type="button" id="importMigrationBtn" class="settings-menu-item">
+        <span class="settings-menu-icon">🟢↙️</span>
+        <span class="settings-menu-text">
+          <span class="settings-menu-title">Importar datos</span>
+          <span class="settings-menu-desc">Restaurar datos desde un archivo exportado</span>
+        </span>
+        <span class="settings-menu-arrow">→</span>
+      </button>
+      <input type="file" id="importMigrationInput" accept="application/json" style="display:none;">
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: HISTORIAL DE CAMBIOS (CHANGELOG) ===================== -->
+  <div id="changelogPanel" class="notif-panel" style="display:none;">
+    <div class="notif-panel-head">
+      <p class="notif-panel-title">📋 Historial de cambios</p>
+      <button type="button" id="changelogCloseBtn" class="notif-close">✕</button>
+    </div>
+    <div class="settings-menu" id="changelogList">
+      <!-- Se llena dinámicamente desde CHANGELOG_DATA -->
     </div>
   </div>
 
@@ -2049,6 +2093,35 @@ const SALAS = [
       { id:'purga_vaso_agua_blanda_2', type:'check', label:'Purga vaso agua blanda — 2' },
       { id:'purga_bypass_grupo1_a', type:'check', label:'Purga Bypass grupo 1 — A' },
       { id:'purga_bypass_grupo1_b', type:'check', label:'Purga Bypass grupo 1 — B' },
+    ]
+  }
+]
+  },
+  {
+    key: 'convenciones_pb',
+    exportFileName: '27. Historial Centro Convenciones PB',
+    name: 'Centro Convenciones PB',
+    subtitle: 'Control quincenal',
+    icon: '🏛️',
+    fullTitle: 'Centro Convenciones PB — Control Quincenal',
+    groups: [
+  {
+    title: 'Apertura de toldos de entrada',
+    schedule: { period:'interval', intervalDays:14, anchor:'2026-09-04' },
+    items: [
+      { id:'toldo_1', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 1' },
+      { id:'toldo_2', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 2' },
+      { id:'toldo_3', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 3' },
+      { id:'toldo_4', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 4' },
+      { id:'toldo_5', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 5' },
+      { id:'toldo_6', type:'faultselect', options:['Correcto','Fallo'], detailOption:'Fallo', detailLabel:'Detalle del fallo', label:'Toldo de entrada 6' },
+    ]
+  },
+  {
+    title: 'Equipos',
+    schedule: { period:'interval', intervalDays:14, anchor:'2026-09-04' },
+    items: [
+      { id:'lavacopas_sammic', type:'check', label:'Puesta en marcha Lava copas Sammic' },
     ]
   }
 ]
@@ -4001,6 +4074,64 @@ initSession();
 
 <script>
 // =====================================================================
+// Historial de cambios (Changelog)
+// Cada actualización que se sube se agrega acá arriba de todo, con el
+// número de versión, la fecha, y el detalle de qué cambió. Se muestra
+// en Configuración → Historial de cambios.
+// =====================================================================
+const CHANGELOG_DATA = [
+  {
+    version: 'v1.02',
+    date: '2026-09-04',
+    changes: [
+      'Nueva zona: Centro Convenciones PB — control de los 6 toldos de entrada (Correcto/Fallo) y puesta en marcha del lava copas Sammic.',
+      'Configuración: nueva sección "Historial de cambios" (este mismo listado).',
+      'Configuración: nuevo botón "Buscar actualizaciones" para revisar manualmente si hay una versión nueva.',
+      'Configuración: íconos nuevos para Exportar datos (🔴↗️) e Importar datos (🟢↙️).',
+    ]
+  },
+  {
+    version: 'v1.01',
+    date: '2026-09-04',
+    changes: [
+      'Osmosis Inversa: "Recarga de Lejía 50%" ahora se mide en % restante en el bidón, en vez de un simple check.',
+      'Potabilizadora: sosa cáustica pasa de bolsas a bidones, y se agregó un medidor de % restante.',
+      'Calidad del Agua: el campo de Temperatura ACS se deshabilita automáticamente en los puntos SOT 1.3-G y SOT 2-G2 (agua fría exclusiva).',
+      'Calidad del Agua: "CLR bloque/colector red — ubicación" pasa de texto libre a selector (Sala de máquinas / Zona Bicicletas).',
+      'Sala de Máquinas: bombas de calor/enfriadoras suman la opción "Apagado".',
+      'Sala de Máquinas: control de aljibes pasa de check a selector Alto/Medio/Bajo.',
+      'Sala de Máquinas: control de variadores permite registrar el detalle del fallo (Nº variador - Zona - Fallo).',
+    ]
+  },
+  {
+    version: 'v1.00',
+    date: '2026-08-28',
+    changes: [
+      'Primera versión publicada como PWA instalable (antes era solo un archivo local).',
+      'Corrección: las tareas diarias ahora se actualizan solas al cambiar de día.',
+      'Corrección: las tareas ya no quedan marcadas después de guardar un registro.',
+      'Sistema de actualización automática y migración del historial desde la versión anterior.',
+    ]
+  }
+];
+
+function renderChangelog(){
+  const list = document.getElementById('changelogList');
+  if(!list) return;
+  list.innerHTML = CHANGELOG_DATA.map(entry => `
+    <div style="padding:14px 16px;border-bottom:1px solid var(--color-border);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <span style="font-weight:700;color:var(--color-accent);">${entry.version}</span>
+        <span style="font-size:12px;color:var(--color-ink-soft);">${entry.date}</span>
+      </div>
+      <ul style="margin:0;padding-left:18px;">
+        ${entry.changes.map(c => `<li style="margin-bottom:4px;font-size:13px;color:var(--color-ink-soft);">${c}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+// =====================================================================
 // Registro del Service Worker + banner de "hay una actualización"
 // =====================================================================
 if ('serviceWorker' in navigator) {
@@ -4031,6 +4162,31 @@ function mostrarBannerActualizacion(){
   document.body.appendChild(banner);
   document.getElementById('pwaUpdateBtn').addEventListener('click', () => {
     window.location.reload();
+  });
+}
+
+// Búsqueda manual de actualizaciones (botón en Configuración), para los
+// casos donde el aviso automático no aparece solo.
+function buscarActualizacionesManual(){
+  if(!('serviceWorker' in navigator)){
+    alert('Este navegador no soporta actualizaciones automáticas.');
+    return;
+  }
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if(!reg){
+      alert('La app todavía no registró el service worker. Probá recargar la página primero.');
+      return;
+    }
+    reg.update().then(() => {
+      setTimeout(() => {
+        if(!reg.installing && !reg.waiting && !document.getElementById('pwaUpdateBanner')){
+          alert('Ya tenés la última versión instalada.');
+        }
+      }, 1500);
+    }).catch((err) => {
+      console.error(err);
+      alert('No se pudo revisar actualizaciones. Verificá tu conexión a internet.');
+    });
   });
 }
 
@@ -4088,37 +4244,40 @@ function importarDatosMigracion(file){
   reader.readAsText(file);
 }
 
-// Botón "Importar datos" oculto, se activa solo si existe #importDatosInput en el HTML.
-// Si no existe, lo agregamos flotante para que siempre esté disponible desde el menú ⚙️.
+// =====================================================================
+// Conectar los botones fijos del panel de Configuración: changelog,
+// buscar actualizaciones, exportar/importar datos.
+// =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  const settingsPanel = document.getElementById('settingsPanel');
-  if (!settingsPanel) return;
+  renderChangelog();
 
-  // Botón exportar (migración)
-  const btnExport = document.createElement('div');
-  btnExport.className = 'settings-menu-item';
-  btnExport.style.cssText = 'cursor:pointer;padding:8px 12px;';
-  btnExport.innerHTML = '<span class="settings-menu-title">Exportar datos (migración)</span>';
-  btnExport.addEventListener('click', exportarDatosMigracion);
-  settingsPanel.appendChild(btnExport);
+  const changelogBtn = document.getElementById('changelogBtn');
+  const changelogPanel = document.getElementById('changelogPanel');
+  const changelogCloseBtn = document.getElementById('changelogCloseBtn');
+  if(changelogBtn && changelogPanel){
+    changelogBtn.addEventListener('click', () => {
+      document.getElementById('settingsPanel').style.display = 'none';
+      changelogPanel.style.display = 'block';
+    });
+  }
+  if(changelogCloseBtn && changelogPanel){
+    changelogCloseBtn.addEventListener('click', () => { changelogPanel.style.display = 'none'; });
+  }
 
-  // Botón importar (migración) + input file oculto
-  const inputImport = document.createElement('input');
-  inputImport.type = 'file';
-  inputImport.accept = 'application/json';
-  inputImport.style.display = 'none';
-  inputImport.addEventListener('change', (ev) => {
-    if (ev.target.files && ev.target.files[0]) importarDatosMigracion(ev.target.files[0]);
-  });
+  const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+  if(checkUpdateBtn) checkUpdateBtn.addEventListener('click', buscarActualizacionesManual);
 
-  const btnImport = document.createElement('div');
-  btnImport.className = 'settings-menu-item';
-  btnImport.style.cssText = 'cursor:pointer;padding:8px 12px;';
-  btnImport.innerHTML = '<span class="settings-menu-title">Importar datos (migración)</span>';
-  btnImport.addEventListener('click', () => inputImport.click());
+  const exportBtn = document.getElementById('exportMigrationBtn');
+  if(exportBtn) exportBtn.addEventListener('click', exportarDatosMigracion);
 
-  settingsPanel.appendChild(inputImport);
-  settingsPanel.appendChild(btnImport);
+  const importBtn = document.getElementById('importMigrationBtn');
+  const importInput = document.getElementById('importMigrationInput');
+  if(importBtn && importInput){
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (ev) => {
+      if(ev.target.files && ev.target.files[0]) importarDatosMigracion(ev.target.files[0]);
+    });
+  }
 });
 </script>
 </body>

@@ -3,12 +3,12 @@
 //
 // IMPORTANTE PARA FUTURAS ACTUALIZACIONES:
 // Cada vez que subas una versión nueva del código, tenés que cambiar
-// el número de CACHE_VERSION de abajo (por ejemplo de 'v1' a 'v2').
+// el número de CACHE_VERSION de abajo (ej. de 'v1.02' a 'v1.03'). Usamos v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea un cambio grande de verdad.
 // Eso es lo que le avisa a la app que hay algo nuevo para descargar.
 // Si no cambiás este número, los usuarios van a seguir viendo la
 // versión vieja aunque subas archivos nuevos al repositorio.
 // =====================================================================
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v1.02';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
