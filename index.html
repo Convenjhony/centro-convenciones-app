@@ -2164,9 +2164,9 @@ const SALAS = [
     title: '3. Control de calderas por fallos (avisar si es indispensable)',
     schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
     items: [
-      { id:'control_caldera_1', type:'check', label:'Caldera 1 — control por fallos' },
-      { id:'control_caldera_2', type:'check', label:'Caldera 2 — control por fallos' },
-      { id:'control_caldera_3', type:'check', label:'Caldera 3 — control por fallos' },
+      { id:'control_caldera_1', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Caldera 1 — control por fallos' },
+      { id:'control_caldera_2', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Caldera 2 — control por fallos' },
+      { id:'control_caldera_3', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Caldera 3 — control por fallos' },
     ]
   },
   {
@@ -2177,11 +2177,22 @@ const SALAS = [
     ]
   },
   {
-    title: '5. Evaporadoras y azotea',
+    title: '5. Enfriadoras y azotea',
     schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
     items: [
-      { id:'control_evaporadoras', type:'check', label:'Controlar evaporadoras' },
+      { id:'control_enfriadora_1', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Enfriadora 1' },
+      { id:'control_enfriadora_2', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Enfriadora 2' },
       { id:'revision_azotea', type:'check', label:'Revisión general de azotea' },
+    ]
+  },
+  {
+    title: '6. Climatizadoras de salas (equipos en azotea)',
+    schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
+    items: [
+      { id:'climatizadora_poniente', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Poniente' },
+      { id:'climatizadora_siroco', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Siroco' },
+      { id:'climatizadora_mistral', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Mistral' },
+      { id:'climatizadora_tramontana', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Tramontana' },
     ]
   },
 ]
@@ -2510,7 +2521,7 @@ const SALAS = [
 // filtra la grilla de salas para mostrar solo las de esa planta.
 // =====================================================================
 const FLOORS = [
-  { key:'terraza', name:'Terraza', eyebrow:'Nivel superior' },
+  { key:'terraza', name:'Azotea', eyebrow:'Nivel superior' },
   { key:'pb', name:'Planta Baja', eyebrow:'Nivel principal' },
   { key:'sotano', name:'Sótano', eyebrow:'Nivel inferior' },
 ];
@@ -4540,6 +4551,16 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.07',
+    date: '2026-09-24',
+    changes: [
+      'La planta "Terraza" pasó a llamarse "Azotea".',
+      'Sala de Calderas: "Control de calderas por fallos" ahora es un selector (Apagado / Correcto-Encendido / Fallo), con campo de código o número de fallo cuando corresponde.',
+      'Sala de Calderas: "Controlar evaporadoras" se reemplazó por Enfriadora 1 y Enfriadora 2, con el mismo esquema de selector + código de fallo.',
+      'Sala de Calderas: nuevo grupo "Climatizadoras de salas" — controla las climatizadoras (ubicadas en la azotea) de las salas Poniente, Siroco, Mistral y Tramontana.',
+    ]
+  },
   {
     version: 'v1.06',
     date: '2026-09-24',
