@@ -621,7 +621,123 @@
     flex:0 0 auto;
   }
 
-  .back-btn{
+  /* ---- Selector de plantas (Terraza / Planta Baja / Sótano) ---- */
+  #floorPicker{
+    max-width:760px;
+    margin:0 auto;
+    padding:24px 16px 40px;
+  }
+  #floorPicker .picker-header{
+    background:var(--color-ink);
+    color:#fff;
+    padding:20px 20px 18px;
+    margin:-24px -16px 20px;
+    border-radius:0 0 16px 16px;
+  }
+  #floorPicker .picker-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--color-accent);
+    margin:0 0 4px;
+  }
+  #floorPicker h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:24px;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    margin:0 0 4px;
+  }
+  #floorPicker .picker-sub{
+    font-size:13px;
+    color:#C9C7C2;
+    margin:0;
+  }
+  .floor-grid{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  /* Tarjeta de planta: fondo (por ahora degradado placeholder — se
+     reemplaza por una foto real poniendo background-image en
+     .floor-card-bg, ver comentario más abajo) + capa "gloss" encima
+     para que el título se lea bien sobre cualquier imagen. */
+  .floor-card{
+    position:relative;
+    min-height:168px;
+    border-radius:20px;
+    overflow:hidden;
+    cursor:pointer;
+    isolation:isolate;
+    transition:transform .15s ease;
+  }
+  .floor-card:active{ transform:scale(0.98); }
+  .floor-card-bg{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background-size:cover;
+    background-position:center;
+  }
+  /* PLACEHOLDER de fondo por planta — cuando tengas las fotos, reemplazá
+     cada uno de estos 3 bloques por: background-image:url('nombre.jpg'); */
+  #floorPicker [data-floor="terraza"] .floor-card-bg{
+    background:linear-gradient(135deg,#3A5A78,#6E96AE 60%,#C9A876);
+  }
+  #floorPicker [data-floor="pb"] .floor-card-bg{
+    background:linear-gradient(135deg,#1E4396,#2C5CC5 55%,#6E8FD8);
+  }
+  #floorPicker [data-floor="sotano"] .floor-card-bg{
+    background:linear-gradient(135deg,#0B1220,#232E45 60%,#3C4A66);
+  }
+  /* Capa gloss: da el brillo/vidrio por encima de la imagen, y oscurece
+     abajo para que el texto blanco siempre se lea. */
+  .floor-card-gloss{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 35%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.55) 100%),
+      radial-gradient(120% 60% at 15% 0%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%);
+    backdrop-filter:saturate(115%);
+  }
+  .floor-card-content{
+    position:relative;
+    z-index:2;
+    height:100%;
+    padding:20px 22px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    color:#fff;
+  }
+  .floor-card-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.75);
+    margin:0 0 2px;
+  }
+  .floor-card-name{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    margin:0 0 2px;
+    text-shadow:0 1px 6px rgba(0,0,0,0.35);
+  }
+  .floor-card-desc{
+    font-size:12.5px;
+    color:rgba(255,255,255,0.85);
+    margin:0;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+
     background:none;
     border:none;
     color:var(--color-accent);
@@ -1320,6 +1436,16 @@
   </div>
 </div>
 
+<!-- ===================== SELECTOR DE PLANTAS ===================== -->
+<div id="floorPicker" style="display:none;">
+  <div class="picker-header">
+    <p class="picker-eyebrow">Centro de Convenciones</p>
+    <h1>Elegí una planta</h1>
+    <p class="picker-sub" id="floorGreeting">Elegí la planta para ver sus salas.</p>
+  </div>
+  <div class="floor-grid" id="floorGrid"></div>
+</div>
+
 <!-- ===================== SELECTOR DE SALAS ===================== -->
 <div id="salaPicker" style="display:none;">
   <div class="picker-header">
@@ -1327,8 +1453,9 @@
     <button type="button" id="bellBtn" class="bell-btn" title="Notificaciones">
       🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
     </button>
-    <p class="picker-eyebrow">Centro de Convenciones</p>
-    <h1>Control de Salas</h1>
+    <button type="button" id="backToFloorsBtn" class="back-btn" style="margin-bottom:8px;">← Plantas</button>
+    <p class="picker-eyebrow" id="salaPickerEyebrow">Centro de Convenciones</p>
+    <h1 id="salaPickerTitle">Control de Salas</h1>
     <p class="picker-sub" id="userGreeting">Elegí una sala para ver su checklist e historial.</p>
     <p class="picker-clock" id="pickerClock">--:--:--</p>
   </div>
@@ -1622,6 +1749,7 @@ function calcularClaveRotacion(rotation, fechaReferencia){
 const SALAS = [
   {
     key: 'almacen',
+    floor: 'sotano',
     exportFileName: '24. Historial Almacén',
     name: 'Almacén',
     subtitle: 'Control semanal',
@@ -1649,6 +1777,7 @@ const SALAS = [
   },
   {
     key: 'osmosis',
+    floor: 'sotano',
     exportFileName: '22. Historial Osmosis Inversa',
     name: 'Osmosis Inversa',
     subtitle: 'Control semanal',
@@ -1682,6 +1811,7 @@ const SALAS = [
   },
   {
     key: 'generadores',
+    floor: 'sotano',
     exportFileName: '21. Historial Sala Generadores',
     name: 'Grupos Electrógenos',
     subtitle: 'Control quincenal',
@@ -1718,6 +1848,7 @@ const SALAS = [
   },
   {
     key: 'cocina',
+    floor: 'sotano',
     exportFileName: '17. Historial Cocina',
     name: 'Cocina',
     subtitle: 'Control semanal',
@@ -1754,6 +1885,7 @@ const SALAS = [
   },
   {
     key: 'cpd',
+    floor: 'sotano',
     exportFileName: '18. Historial CPD',
     name: 'CPD',
     subtitle: 'Control de mantenimiento',
@@ -1780,6 +1912,7 @@ const SALAS = [
   },
   {
     key: 'maquinas',
+    floor: 'sotano',
     exportFileName: '19. Historial Sala de Maquinas',
     name: 'Sala de Máquinas',
     subtitle: 'Control diario',
@@ -1889,6 +2022,7 @@ const SALAS = [
   },
   {
     key: 'banos',
+    floor: 'sotano',
     exportFileName: '20. Historial Baños',
     name: 'Baños del Subsuelo',
     subtitle: 'Control semanal',
@@ -1915,6 +2049,7 @@ const SALAS = [
   },
   {
     key: 'potabilizadora',
+    floor: 'sotano',
     exportFileName: '23. Historial Potabilizadora',
     name: 'Sala Potabilizadora',
     subtitle: 'Control de mantenimiento',
@@ -1940,6 +2075,7 @@ const SALAS = [
   },
   {
     key: 'calderas',
+    floor: 'terraza',
     exportFileName: '26. Historial Sala de Calderas',
     name: 'Sala de Calderas',
     subtitle: 'Control mensual',
@@ -1982,6 +2118,7 @@ const SALAS = [
   },
   {
     key: 'calidadagua',
+    floor: 'sotano',
     exportFileName: '2. Control de la calidad del agua Nuevo',
     name: 'Calidad del Agua',
     subtitle: 'Control diario y semanal',
@@ -2072,6 +2209,7 @@ const SALAS = [
   },
   {
     key: 'purgas',
+    floor: 'sotano',
     exportFileName: '25. Historial De purgas',
     name: 'Purgas',
     subtitle: 'Control semanal',
@@ -2099,6 +2237,7 @@ const SALAS = [
   },
   {
     key: 'convenciones_pb',
+    floor: 'pb',
     exportFileName: '27. Historial Centro Convenciones PB',
     name: 'Centro Convenciones PB',
     subtitle: 'Control quincenal',
@@ -2125,9 +2264,186 @@ const SALAS = [
     ]
   }
 ]
+  },
+  {
+    // ===== Salas nuevas de Planta Baja — básicas/placeholder =====
+    // Se crearon vacías a pedido, con un único ítem genérico de control.
+    // Cuando se defina el checklist real de cada una, se reemplaza el
+    // contenido de "groups" siguiendo el mismo patrón que las demás salas.
+    key: 'siroco',
+    floor: 'pb',
+    exportFileName: '28. Historial Sala Siroco',
+    name: 'Sala Siroco',
+    subtitle: 'Control diario (a definir)',
+    icon: '🌬️',
+    fullTitle: 'Sala Siroco — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'mistral',
+    floor: 'pb',
+    exportFileName: '29. Historial Sala Mistral',
+    name: 'Sala Mistral',
+    subtitle: 'Control diario (a definir)',
+    icon: '🌀',
+    fullTitle: 'Sala Mistral — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'tramontana',
+    floor: 'pb',
+    exportFileName: '30. Historial Sala Tramontana',
+    name: 'Sala Tramontana',
+    subtitle: 'Control diario (a definir)',
+    icon: '🍃',
+    fullTitle: 'Sala Tramontana — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'poniente',
+    floor: 'pb',
+    exportFileName: '31. Historial Sala Poniente',
+    name: 'Sala Poniente',
+    subtitle: 'Control diario (a definir)',
+    icon: '🌅',
+    fullTitle: 'Sala Poniente — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'barra_clientes',
+    floor: 'pb',
+    exportFileName: '32. Historial Barra Clientes',
+    name: 'Barra Clientes',
+    subtitle: 'Control diario (a definir)',
+    icon: '🍹',
+    fullTitle: 'Barra Clientes — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'bano_clientes',
+    floor: 'pb',
+    exportFileName: '33. Historial Baño Clientes',
+    name: 'Baño Clientes',
+    subtitle: 'Control diario (a definir)',
+    icon: '🚻',
+    fullTitle: 'Baño Clientes — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'backoffice',
+    floor: 'pb',
+    exportFileName: '34. Historial Backoffice',
+    name: 'Backoffice',
+    subtitle: 'Control diario (a definir)',
+    icon: '🗄️',
+    fullTitle: 'Backoffice — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'office',
+    floor: 'pb',
+    exportFileName: '35. Historial Office',
+    name: 'Office',
+    subtitle: 'Control diario (a definir)',
+    icon: '💼',
+    fullTitle: 'Office — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
+  },
+  {
+    key: 'cuadro_tableros',
+    floor: 'pb',
+    exportFileName: '36. Historial Cuadro de Tableros',
+    name: 'Cuadro de Tableros',
+    subtitle: 'Control diario (a definir)',
+    icon: '🔌',
+    fullTitle: 'Cuadro de Tableros General de Eléctricos — Control Diario',
+    groups: [
+  {
+    title: 'General',
+    schedule: { period:'day' },
+    items: [
+      { id:'revision_general', type:'check', label:'Revisión general' },
+    ]
+  }
+]
   }
 ];
 
+// =====================================================================
+// Plantas del edificio. Cada sala de SALAS tiene un campo floor que
+// apunta a uno de estos keys. El selector de plantas es la primera
+// pantalla que se ve después de elegir usuario; al tocar una planta se
+// filtra la grilla de salas para mostrar solo las de esa planta.
+// =====================================================================
+const FLOORS = [
+  { key:'terraza', name:'Terraza', eyebrow:'Nivel superior' },
+  { key:'pb', name:'Planta Baja', eyebrow:'Nivel principal' },
+  { key:'sotano', name:'Sótano', eyebrow:'Nivel inferior' },
+];
 
 
 
@@ -2515,11 +2831,60 @@ document.getElementById('changePinBtn').addEventListener('click', ()=>{
   abrirModalPin(currentUser, 'settings');
 });
 
+function showFloorPickerScreen(){
+  userPicker.style.display = 'none';
+  salaPicker.style.display = 'none';
+  floorPicker.style.display = 'block';
+  switchUserBtn.style.display = 'flex';
+  window.scrollTo(0,0);
+
+  if(currentUser){
+    floorGreeting.textContent = `👋 Hola, ${currentUser.name} — elegí la planta para ver sus salas.`;
+  }
+  renderFloorGrid();
+}
+
+function renderFloorGrid(){
+  floorGrid.innerHTML = '';
+  FLOORS.forEach(floor=>{
+    const salasDeEstaPlanta = SALAS.filter(s=>s.floor===floor.key);
+    const card = document.createElement('div');
+    card.className = 'floor-card';
+    card.setAttribute('data-floor', floor.key);
+    card.innerHTML = `
+      <div class="floor-card-bg"></div>
+      <div class="floor-card-gloss"></div>
+      <div class="floor-card-content">
+        <p class="floor-card-eyebrow">${floor.eyebrow}</p>
+        <p class="floor-card-name">${floor.name}</p>
+        <p class="floor-card-desc">${salasDeEstaPlanta.length} sala${salasDeEstaPlanta.length===1?'':'s'}</p>
+      </div>
+    `;
+    card.addEventListener('click', ()=> selectFloor(floor.key));
+    floorGrid.appendChild(card);
+  });
+}
+
+function selectFloor(key){
+  currentFloor = key;
+  showSalaPickerScreen();
+}
+
+document.getElementById('backToFloorsBtn').addEventListener('click', ()=>{
+  currentFloor = null;
+  showFloorPickerScreen();
+});
+
 function showSalaPickerScreen(){
   userPicker.style.display = 'none';
+  floorPicker.style.display = 'none';
   salaPicker.style.display = 'block';
   switchUserBtn.style.display = 'flex';
   window.scrollTo(0,0);
+
+  const floor = FLOORS.find(f=>f.key===currentFloor);
+  document.getElementById('salaPickerEyebrow').textContent = floor ? floor.name : 'Centro de Convenciones';
+  document.getElementById('salaPickerTitle').textContent = floor ? `Salas — ${floor.name}` : 'Control de Salas';
 
   if(currentUser){
     userGreeting.textContent = `👋 Hola, ${currentUser.name} — elegí una sala para ver su checklist e historial.`;
@@ -2538,8 +2903,10 @@ function showSalaPickerScreen(){
 
 switchUserBtn.addEventListener('click', ()=>{
   currentUser = null;
+  currentFloor = null;
   try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
   salaPicker.style.display = 'none';
+  floorPicker.style.display = 'none';
   switchUserBtn.style.display = 'none';
   userPicker.style.display = 'block';
   window.scrollTo(0,0);
@@ -2551,13 +2918,15 @@ function initSession(){
   try{ savedId = localStorage.getItem(SESSION_KEY); }catch(e){}
   if(savedId && USERS.some(u=>u.id===savedId)){
     currentUser = USERS.find(u=>u.id===savedId);
-    showSalaPickerScreen();
+    showFloorPickerScreen();
   } else {
     userPicker.style.display = 'block';
     salaPicker.style.display = 'none';
+    floorPicker.style.display = 'none';
     switchUserBtn.style.display = 'none';
   }
 }
+
 
 // =====================================================================
 // Estado global de la sala actualmente seleccionada
@@ -2569,6 +2938,7 @@ function initSession(){
 const OTRO_LABEL = 'Otro / no está en la lista (especificar)';
 
 let currentSala = null;
+let currentFloor = null;
 let ITEMS = [];
 let DRAFT_KEY = '';
 let HIST_PREFIX = '';
@@ -2579,6 +2949,9 @@ let saving = false;
 // =====================================================================
 // Referencias DOM
 // =====================================================================
+const floorPicker = document.getElementById('floorPicker');
+const floorGrid = document.getElementById('floorGrid');
+const floorGreeting = document.getElementById('floorGreeting');
 const salaGrid = document.getElementById('salaGrid');
 const salaPicker = document.getElementById('salaPicker');
 const appShell = document.getElementById('appShell');
@@ -2677,7 +3050,7 @@ const store = {
 function renderSalaGrid(){
   salaGrid.innerHTML = '';
   const dueKeys = new Set(calcularNotificacionesHoy().map(i=>i.salaKey));
-  SALAS.forEach(sala=>{
+  SALAS.filter(sala => sala.floor === currentFloor).forEach(sala=>{
     const card = document.createElement('div');
     card.className = 'sala-card';
     const itemCount = sala.groups.flatMap(g=>g.items).length;
