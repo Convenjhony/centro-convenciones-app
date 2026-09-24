@@ -3,12 +3,11 @@
 //
 // IMPORTANTE PARA FUTURAS ACTUALIZACIONES:
 // Cada vez que subas una versión nueva del código, tenés que cambiar
-// el número de CACHE_VERSION de abajo (ej. de 'v1.02' a 'v1.03'). Usamos v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea un cambio grande de verdad.
-// Eso es lo que le avisa a la app que hay algo nuevo para descargar.
-// Si no cambiás este número, los usuarios van a seguir viendo la
-// versión vieja aunque subas archivos nuevos al repositorio.
+// el número de CACHE_VERSION de abajo (ej. de 'v1.04' a 'v1.05'). Usamos
+// v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea
+// un cambio grande de verdad.
 // =====================================================================
-const CACHE_VERSION = 'v1.03';
+const CACHE_VERSION = 'v1.04';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
@@ -19,8 +18,6 @@ const ASSETS_TO_CACHE = [
   './icons/icon-512.png'
 ];
 
-// Al instalar una versión nueva del service worker, descarga y guarda
-// en caché todos los archivos de la app.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
@@ -28,8 +25,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Al activarse, borra cachés de versiones anteriores para no acumular
-// basura ni servir archivos viejos por error.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -43,9 +38,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Estrategia: responder rápido desde el caché (para que la app abra al
-// instante incluso sin señal), y en paralelo pedir la versión nueva a
-// internet para tenerla lista la próxima vez.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
