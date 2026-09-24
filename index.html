@@ -372,6 +372,7 @@
     background:var(--color-ink-bar);
     color:#fff;
     padding:15px 16px;
+    border:2px solid rgba(255,255,255,0.6);
   }
   .btn-save{
     flex:1.3;
@@ -1200,28 +1201,32 @@
   #salaPicker .picker-header{
     padding-left:66px;
   }
-  /* Botón "Plantas" (volver al selector de plantas): mismo alto que los
-     botones redondos de arriba, pero rectangular porque lleva texto. */
-  .floor-nav-btn{
-    height:44px;
-    padding:0 16px;
-    margin:0 0 12px;
+  /* Botón "Plantas": FAB flotante abajo a la izquierda, mismo patrón que
+     el de "Cambiar usuario" (abajo a la derecha), un poco más grande, y
+     con borde blanco visible para que no se pierda contra el fondo oscuro. */
+  .floor-nav-fab{
+    position:fixed;
+    left:18px;
+    bottom:18px;
+    z-index:40;
+    display:none;
+    align-items:center;
+    gap:8px;
     background:var(--color-ink-bar);
     color:#fff;
-    border:none;
-    border-radius:12px;
+    border:2px solid rgba(255,255,255,0.6);
+    border-radius:28px;
+    padding:14px 20px;
     font-family:'Oswald',sans-serif;
-    font-size:13px;
+    font-size:14px;
     font-weight:600;
+    letter-spacing:0.02em;
     text-transform:uppercase;
-    letter-spacing:0.03em;
     cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
+    box-shadow:0 6px 16px rgba(11,18,32,0.4);
   }
-  .floor-nav-btn:active{
-    transform:scale(0.96);
+  .floor-nav-fab:active{
+    transform:scale(0.95);
   }
 
   /* ---- Menú de opciones de Configuración (reutiliza el look del panel de notificaciones) ---- */
@@ -1595,7 +1600,6 @@
     <button type="button" id="bellBtn" class="bell-btn" title="Notificaciones">
       🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
     </button>
-    <button type="button" id="backToFloorsBtn" class="floor-nav-btn">🏢 Plantas</button>
     <p class="picker-eyebrow" id="salaPickerEyebrow">Centro de Convenciones</p>
     <h1 id="salaPickerTitle">Control de Salas</h1>
     <p class="picker-sub" id="userGreeting">Elegí una sala para ver su checklist e historial.</p>
@@ -1688,6 +1692,9 @@
 
 <div class="toast" id="toast"></div>
 
+<button type="button" id="backToFloorsBtn" class="floor-nav-fab" style="display:none;" title="Volver al selector de plantas">
+  🏢 <span>Plantas</span>
+</button>
 <button type="button" id="switchUserBtn" class="switch-user-fab" title="Cambiar usuario">
   🔁 <span>Cambiar usuario</span>
 </button>
@@ -2715,6 +2722,7 @@ const userPicker = document.getElementById('userPicker');
 const userGrid = document.getElementById('userGrid');
 const userGreeting = document.getElementById('userGreeting');
 const switchUserBtn = document.getElementById('switchUserBtn');
+const backToFloorsBtn = document.getElementById('backToFloorsBtn');
 const offDayBanner = document.getElementById('offDayBanner');
 
 function renderUserPicker(){
@@ -2905,6 +2913,7 @@ function showFloorPickerScreen(){
   salaPicker.style.display = 'none';
   floorPicker.style.display = 'block';
   switchUserBtn.style.display = 'flex';
+  backToFloorsBtn.style.display = 'none';
   window.scrollTo(0,0);
   applyTheme();
 
@@ -2950,6 +2959,7 @@ function showSalaPickerScreen(){
   floorPicker.style.display = 'none';
   salaPicker.style.display = 'block';
   switchUserBtn.style.display = 'flex';
+  backToFloorsBtn.style.display = 'flex';
   window.scrollTo(0,0);
 
   const floor = FLOORS.find(f=>f.key===currentFloor);
@@ -2978,6 +2988,7 @@ switchUserBtn.addEventListener('click', ()=>{
   salaPicker.style.display = 'none';
   floorPicker.style.display = 'none';
   switchUserBtn.style.display = 'none';
+  backToFloorsBtn.style.display = 'none';
   userPicker.style.display = 'block';
   window.scrollTo(0,0);
   applyTheme();
@@ -2995,6 +3006,7 @@ function initSession(){
     salaPicker.style.display = 'none';
     floorPicker.style.display = 'none';
     switchUserBtn.style.display = 'none';
+    backToFloorsBtn.style.display = 'none';
   }
 }
 
@@ -3335,6 +3347,7 @@ async function selectSala(key){
   salaPicker.style.display = 'none';
   appShell.style.display = 'block';
   switchUserBtn.style.display = 'none';
+  backToFloorsBtn.style.display = 'none';
   window.scrollTo(0,0);
 
   // Volver siempre a la pestaña Checklist al entrar
@@ -3360,6 +3373,7 @@ function backToPicker(){
   appShell.style.display = 'none';
   salaPicker.style.display = 'block';
   switchUserBtn.style.display = 'flex';
+  backToFloorsBtn.style.display = 'flex';
   window.scrollTo(0,0);
   renderSalaGrid();
   renderNotificaciones();
@@ -4526,6 +4540,14 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.05',
+    date: '2026-09-24',
+    changes: [
+      'Botón "Plantas" movido de la cabecera a la parte inferior izquierda, como botón flotante más grande, con borde blanco visible.',
+      'Botón "← Salas" (dentro del checklist de una sala) también recibió el mismo borde blanco, para que se distinga mejor sobre el fondo oscuro.',
+    ]
+  },
   {
     version: 'v1.04',
     date: '2026-09-24',
