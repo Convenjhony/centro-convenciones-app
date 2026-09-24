@@ -27,6 +27,7 @@
     --color-bg:#F4F6F9;
     --color-surface:#FFFFFF;
     --color-ink:#0B1220;
+    --color-ink-bar:#0B1220;
     --color-ink-soft:#5B6472;
     --color-accent:#2C5CC5;
     --color-accent-dark:#1E4396;
@@ -39,6 +40,24 @@
     --color-border:#D8DEE8;
     --color-danger:#0B1220;
     --radius:14px;
+  }
+
+  /* ---- Tema Oscuro/Gris — exclusivo para el usuario Jhony ---- */
+  /* Se activa agregando la clase "theme-dark" al <body> (ver JS, se
+     enciende sola al iniciar sesión como Jhony). Las barras y botones
+     oscuros (que usan --color-ink-bar) quedan igual que siempre; lo que
+     cambia es el fondo, las tarjetas y el texto, que pasan a gris oscuro. */
+  body.theme-dark{
+    --color-bg:#15171B;
+    --color-surface:#20232A;
+    --color-ink:#E8EAED;
+    --color-ink-soft:#9AA0AC;
+    --color-done-bg:#2A2D33;
+    --color-done-border:#454952;
+    --color-done-text:#8B909A;
+    --color-done-icon:#6E7480;
+    --color-success-bg:#1B2A4A;
+    --color-border:#33363E;
   }
 
   *{box-sizing:border-box;}
@@ -66,7 +85,7 @@
   }
 
   header{
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:18px 20px 16px;
   }
@@ -335,7 +354,7 @@
   }
   .btn-primary{
     flex:1;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
   }
   .btn-primary:disabled{
@@ -350,7 +369,7 @@
   }
   .btn-back{
     flex:0 0 auto;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:15px 16px;
   }
@@ -502,7 +521,7 @@
     left:50%;
     bottom:100px;
     transform:translateX(-50%) translateY(10px);
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:12px 18px;
     border-radius:10px;
@@ -535,7 +554,7 @@
     padding:24px 16px 40px;
   }
   #salaPicker .picker-header{
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:20px 20px 18px;
     margin:-24px -16px 20px;
@@ -595,7 +614,7 @@
     width:46px;
     height:46px;
     border-radius:12px;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -628,9 +647,10 @@
     padding:24px 16px 40px;
   }
   #floorPicker .picker-header{
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:20px 20px 18px;
+    padding-left:66px;
     margin:-24px -16px 20px;
     border-radius:0 0 16px 16px;
   }
@@ -821,7 +841,7 @@
 
   .btn-refresh-rotation{
     flex:0 0 auto;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     border:none;
     border-radius:16px;
@@ -955,11 +975,29 @@
     border-radius:var(--radius);
     overflow:hidden;
   }
+  /* settingsPanel y changelogPanel se abren desde 2 pantallas distintas
+     (selector de plantas y selector de salas), así que se fijan como un
+     panel flotante anclado arriba de la pantalla en vez de empujar el
+     contenido — así se ven bien sin importar desde dónde se abran. */
+  #settingsPanel, #changelogPanel{
+    position:fixed;
+    top:72px;
+    left:16px;
+    right:16px;
+    margin:0 auto;
+    z-index:200;
+    max-height:calc(100vh - 96px);
+    overflow-y:auto;
+    box-shadow:0 14px 34px rgba(0,0,0,0.28);
+  }
+  @media (min-width:792px){
+    #settingsPanel, #changelogPanel{ left:50%; right:auto; transform:translateX(-50%); width:760px; }
+  }
   .notif-panel-head{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:12px 16px;
   }
@@ -1044,7 +1082,7 @@
     padding:24px 16px 40px;
   }
   #userPicker .picker-header{
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     padding:20px 20px 18px;
     margin:-24px -16px 20px;
@@ -1106,7 +1144,7 @@
     display:none;
     align-items:center;
     gap:8px;
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     border:none;
     border-radius:28px;
@@ -1161,6 +1199,29 @@
   }
   #salaPicker .picker-header{
     padding-left:66px;
+  }
+  /* Botón "Plantas" (volver al selector de plantas): mismo alto que los
+     botones redondos de arriba, pero rectangular porque lleva texto. */
+  .floor-nav-btn{
+    height:44px;
+    padding:0 16px;
+    margin:0 0 12px;
+    background:var(--color-ink-bar);
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    font-family:'Oswald',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+  }
+  .floor-nav-btn:active{
+    transform:scale(0.96);
   }
 
   /* ---- Menú de opciones de Configuración (reutiliza el look del panel de notificaciones) ---- */
@@ -1361,7 +1422,7 @@
     justify-content:space-between;
   }
   .modo-manual-banner button{
-    background:var(--color-ink);
+    background:var(--color-ink-bar);
     color:#fff;
     border:none;
     border-radius:14px;
@@ -1439,11 +1500,92 @@
 <!-- ===================== SELECTOR DE PLANTAS ===================== -->
 <div id="floorPicker" style="display:none;">
   <div class="picker-header">
+    <button type="button" id="settingsBtnFloor" class="settings-btn" title="Configuración">⚙️</button>
     <p class="picker-eyebrow">Centro de Convenciones</p>
     <h1>Elegí una planta</h1>
     <p class="picker-sub" id="floorGreeting">Elegí la planta para ver sus salas.</p>
   </div>
   <div class="floor-grid" id="floorGrid"></div>
+</div>
+
+<!-- ===================== PANEL DE CONFIGURACIÓN (compartido: se abre desde floorPicker o salaPicker) ===================== -->
+<div id="settingsPanel" class="notif-panel" style="display:none;">
+  <div class="notif-panel-head">
+    <p class="notif-panel-title">⚙️ Configuración</p>
+    <button type="button" id="settingsCloseBtn" class="notif-close">✕</button>
+  </div>
+  <div class="settings-menu">
+    <button type="button" id="fullBackupBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">📦</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Respaldo completo</span>
+        <span class="settings-menu-desc">Descargar el historial de todas las salas</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <div class="settings-menu-item settings-menu-toggle-row">
+      <span class="settings-menu-icon">⚠️</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Alertas de rango</span>
+        <span class="settings-menu-desc">Avisar cuando un valor sale del rango normal</span>
+      </span>
+      <button type="button" id="alertasRangoToggle" class="toggle-switch" role="switch" aria-checked="true">
+        <span class="toggle-switch-knob"></span>
+      </button>
+    </div>
+    <button type="button" id="changePinBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">🔑</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Cambiar mi PIN</span>
+        <span class="settings-menu-desc" id="changePinDesc">Actualizar el PIN de tu usuario</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <button type="button" id="changelogBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">📋</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Historial de cambios</span>
+        <span class="settings-menu-desc">Qué se actualizó en cada versión</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <button type="button" id="checkUpdateBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">🔄</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Buscar actualizaciones</span>
+        <span class="settings-menu-desc" id="checkUpdateDesc">Revisar manualmente si hay una versión nueva</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <button type="button" id="exportMigrationBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">🔴↗️</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Exportar datos</span>
+        <span class="settings-menu-desc">Descargar todo para migrar a otra app/dispositivo</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <button type="button" id="importMigrationBtn" class="settings-menu-item">
+      <span class="settings-menu-icon">🟢↙️</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Importar datos</span>
+        <span class="settings-menu-desc">Restaurar datos desde un archivo exportado</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <input type="file" id="importMigrationInput" accept="application/json" style="display:none;">
+  </div>
+</div>
+
+<!-- ===================== MODAL: HISTORIAL DE CAMBIOS (CHANGELOG) — compartido ===================== -->
+<div id="changelogPanel" class="notif-panel" style="display:none;">
+  <div class="notif-panel-head">
+    <p class="notif-panel-title">📋 Historial de cambios</p>
+    <button type="button" id="changelogCloseBtn" class="notif-close">✕</button>
+  </div>
+  <div class="settings-menu" id="changelogList">
+    <!-- Se llena dinámicamente desde CHANGELOG_DATA -->
+  </div>
 </div>
 
 <!-- ===================== SELECTOR DE SALAS ===================== -->
@@ -1453,7 +1595,7 @@
     <button type="button" id="bellBtn" class="bell-btn" title="Notificaciones">
       🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
     </button>
-    <button type="button" id="backToFloorsBtn" class="back-btn" style="margin-bottom:8px;">← Plantas</button>
+    <button type="button" id="backToFloorsBtn" class="floor-nav-btn">🏢 Plantas</button>
     <p class="picker-eyebrow" id="salaPickerEyebrow">Centro de Convenciones</p>
     <h1 id="salaPickerTitle">Control de Salas</h1>
     <p class="picker-sub" id="userGreeting">Elegí una sala para ver su checklist e historial.</p>
@@ -1461,85 +1603,6 @@
   </div>
 
   <div id="offDayBanner" class="off-day-banner" style="display:none;"></div>
-
-  <div id="settingsPanel" class="notif-panel" style="display:none;">
-    <div class="notif-panel-head">
-      <p class="notif-panel-title">⚙️ Configuración</p>
-      <button type="button" id="settingsCloseBtn" class="notif-close">✕</button>
-    </div>
-    <div class="settings-menu">
-      <button type="button" id="fullBackupBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">📦</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Respaldo completo</span>
-          <span class="settings-menu-desc">Descargar el historial de todas las salas</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <div class="settings-menu-item settings-menu-toggle-row">
-        <span class="settings-menu-icon">⚠️</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Alertas de rango</span>
-          <span class="settings-menu-desc">Avisar cuando un valor sale del rango normal</span>
-        </span>
-        <button type="button" id="alertasRangoToggle" class="toggle-switch" role="switch" aria-checked="true">
-          <span class="toggle-switch-knob"></span>
-        </button>
-      </div>
-      <button type="button" id="changePinBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">🔑</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Cambiar mi PIN</span>
-          <span class="settings-menu-desc" id="changePinDesc">Actualizar el PIN de tu usuario</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <button type="button" id="changelogBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">📋</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Historial de cambios</span>
-          <span class="settings-menu-desc">Qué se actualizó en cada versión</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <button type="button" id="checkUpdateBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">🔄</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Buscar actualizaciones</span>
-          <span class="settings-menu-desc" id="checkUpdateDesc">Revisar manualmente si hay una versión nueva</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <button type="button" id="exportMigrationBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">🔴↗️</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Exportar datos</span>
-          <span class="settings-menu-desc">Descargar todo para migrar a otra app/dispositivo</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <button type="button" id="importMigrationBtn" class="settings-menu-item">
-        <span class="settings-menu-icon">🟢↙️</span>
-        <span class="settings-menu-text">
-          <span class="settings-menu-title">Importar datos</span>
-          <span class="settings-menu-desc">Restaurar datos desde un archivo exportado</span>
-        </span>
-        <span class="settings-menu-arrow">→</span>
-      </button>
-      <input type="file" id="importMigrationInput" accept="application/json" style="display:none;">
-    </div>
-  </div>
-
-  <!-- ===================== MODAL: HISTORIAL DE CAMBIOS (CHANGELOG) ===================== -->
-  <div id="changelogPanel" class="notif-panel" style="display:none;">
-    <div class="notif-panel-head">
-      <p class="notif-panel-title">📋 Historial de cambios</p>
-      <button type="button" id="changelogCloseBtn" class="notif-close">✕</button>
-    </div>
-    <div class="settings-menu" id="changelogList">
-      <!-- Se llena dinámicamente desde CHANGELOG_DATA -->
-    </div>
-  </div>
 
   <div id="notifPanel" class="notif-panel" style="display:none;">
     <div class="notif-panel-head">
@@ -2592,6 +2655,12 @@ const SESSION_KEY = 'session-current-user';
 const DIAS_SEMANA_LARGO = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 let currentUser = null;
 
+// Tema Oscuro/Gris exclusivo para Jhony — se enciende o apaga solo según
+// quién haya iniciado sesión.
+function applyTheme(){
+  document.body.classList.toggle('theme-dark', !!(currentUser && currentUser.id === 'jhony'));
+}
+
 // =====================================================================
 // Alertas de rango normal (activable/desactivable desde Configuración)
 // =====================================================================
@@ -2771,7 +2840,7 @@ pinConfirmBtn.addEventListener('click', async ()=>{
     currentUser = pinTargetUser;
     try{ localStorage.setItem(SESSION_KEY, currentUser.id); }catch(e){}
     cerrarModalPin();
-    showSalaPickerScreen();
+    showFloorPickerScreen();
     return;
   }
 
@@ -2804,7 +2873,7 @@ pinConfirmBtn.addEventListener('click', async ()=>{
       currentUser = pinTargetUser;
       try{ localStorage.setItem(SESSION_KEY, currentUser.id); }catch(e){}
       cerrarModalPin();
-      showSalaPickerScreen();
+      showFloorPickerScreen();
       showToast('PIN creado correctamente.');
     } else {
       cerrarModalPin();
@@ -2837,6 +2906,7 @@ function showFloorPickerScreen(){
   floorPicker.style.display = 'block';
   switchUserBtn.style.display = 'flex';
   window.scrollTo(0,0);
+  applyTheme();
 
   if(currentUser){
     floorGreeting.textContent = `👋 Hola, ${currentUser.name} — elegí la planta para ver sus salas.`;
@@ -2910,6 +2980,7 @@ switchUserBtn.addEventListener('click', ()=>{
   switchUserBtn.style.display = 'none';
   userPicker.style.display = 'block';
   window.scrollTo(0,0);
+  applyTheme();
 });
 
 function initSession(){
@@ -3218,14 +3289,16 @@ async function exportBackupCompleto(){
 
 document.getElementById('fullBackupBtn').addEventListener('click', exportBackupCompleto);
 
-document.getElementById('settingsBtn').addEventListener('click', ()=>{
+function toggleSettingsPanel(){
   const panel = document.getElementById('settingsPanel');
   const isOpen = panel.style.display !== 'none';
   panel.style.display = isOpen ? 'none' : 'block';
   document.getElementById('notifPanel').style.display = 'none';
   const desc = document.getElementById('changePinDesc');
   if(desc && currentUser) desc.textContent = `Actualizar el PIN de ${currentUser.name}`;
-});
+}
+document.getElementById('settingsBtn').addEventListener('click', toggleSettingsPanel);
+document.getElementById('settingsBtnFloor').addEventListener('click', toggleSettingsPanel);
 document.getElementById('settingsCloseBtn').addEventListener('click', ()=>{
   document.getElementById('settingsPanel').style.display = 'none';
 });
@@ -4453,6 +4526,27 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.04',
+    date: '2026-09-24',
+    changes: [
+      'Botón "Plantas" rediseñado: ahora es un botón negro sólido con texto, del mismo tamaño que los demás botones de la cabecera (antes era un link de texto con flecha).',
+      'El botón de Configuración (⚙️) ahora se ve también en el selector de plantas, no solo en el selector de salas.',
+      'Corrección: el login por PIN llevaba directo a la lista de salas salteando el selector de plantas (mostraba una grilla vacía). Ahora va bien al selector de plantas primero.',
+      'Tema Oscuro/Gris exclusivo para el usuario Jhony — se activa solo al iniciar sesión con su usuario.',
+    ]
+  },
+  {
+    version: 'v1.03',
+    date: '2026-09-24',
+    changes: [
+      'Reestructuración en 3 plantas: Terraza, Planta Baja y Sótano. Ahora se elige la planta primero, y después la sala.',
+      'Sala de Calderas pasó de Sótano a Terraza.',
+      '9 salas nuevas en Planta Baja: Siroco, Mistral, Tramontana, Poniente, Barra Clientes, Baño Clientes, Backoffice, Office y Cuadro de Tableros (básicas por ahora, se completan más adelante).',
+      'El botón de Configuración (⚙️) ahora también está disponible desde la pantalla de selección de planta.',
+      'Botón "Plantas" para volver al selector de plantas desde la lista de salas.',
+    ]
+  },
   {
     version: 'v1.02',
     date: '2026-09-04',
