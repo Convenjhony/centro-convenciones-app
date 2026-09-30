@@ -3,11 +3,11 @@
 //
 // IMPORTANTE PARA FUTURAS ACTUALIZACIONES:
 // Cada vez que subas una versión nueva del código, tenés que cambiar
-// el número de CACHE_VERSION de abajo (ej. de 'v1.07' a 'v1.08'). Usamos
+// el número de CACHE_VERSION de abajo (ej. de 'v1.08' a 'v1.09'). Usamos
 // v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea
 // un cambio grande de verdad.
 // =====================================================================
-const CACHE_VERSION = 'v1.07';
+const CACHE_VERSION = 'v1.08';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
@@ -15,7 +15,10 @@ const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './fondos/azotea.jpg',
+  './fondos/planta-baja.jpg',
+  './fondos/sotano.jpg'
 ];
 
 self.addEventListener('install', (event) => {

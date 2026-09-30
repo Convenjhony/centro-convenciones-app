@@ -702,16 +702,17 @@
     background-size:cover;
     background-position:center;
   }
-  /* PLACEHOLDER de fondo por planta — cuando tengas las fotos, reemplazá
-     cada uno de estos 3 bloques por: background-image:url('nombre.jpg'); */
+  /* Fotos reales de cada planta. Si en algún momento hay que cambiarlas,
+     basta con reemplazar el archivo dentro de fondos/ (mismo nombre) y
+     subir de nuevo — no hace falta tocar este CSS. */
   #floorPicker [data-floor="terraza"] .floor-card-bg{
-    background:linear-gradient(135deg,#3A5A78,#6E96AE 60%,#C9A876);
+    background:#3A5A78 url('fondos/azotea.jpg') center/cover no-repeat;
   }
   #floorPicker [data-floor="pb"] .floor-card-bg{
-    background:linear-gradient(135deg,#1E4396,#2C5CC5 55%,#6E8FD8);
+    background:#1E4396 url('fondos/planta-baja.jpg') center/cover no-repeat;
   }
   #floorPicker [data-floor="sotano"] .floor-card-bg{
-    background:linear-gradient(135deg,#0B1220,#232E45 60%,#3C4A66);
+    background:#0B1220 url('fondos/sotano.jpg') center/cover no-repeat;
   }
   /* Capa gloss: da el brillo/vidrio por encima de la imagen, y oscurece
      abajo para que el texto blanco siempre se lea. */
@@ -4551,6 +4552,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.08',
+    date: '2026-09-30',
+    changes: [
+      'Selector de plantas: se reemplazaron los fondos de color (placeholder) por fotos reales de Azotea, Planta Baja y Sótano.',
+    ]
+  },
   {
     version: 'v1.07',
     date: '2026-09-24',
