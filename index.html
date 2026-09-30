@@ -1597,6 +1597,14 @@
         <span class="toggle-switch-knob"></span>
       </button>
     </div>
+    <button type="button" id="exportFondosBtn" class="settings-menu-item" style="display:none;">
+      <span class="settings-menu-icon">📤</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Exportar fotos y posición de plantas</span>
+        <span class="settings-menu-desc">Para enviárselas a Claude y dejarlas fijas en el código</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
     <input type="file" id="floorImgInput" accept="image/*" style="display:none;">
     <button type="button" id="changePinBtn" class="settings-menu-item">
       <span class="settings-menu-icon">🔑</span>
@@ -2749,12 +2757,39 @@ function isAdmin(){
 function actualizarVisibilidadAdminUI(){
   const row = document.getElementById('editModeFloorsRow');
   if(row) row.style.display = isAdmin() ? 'flex' : 'none';
+  const exportBtn = document.getElementById('exportFondosBtn');
+  if(exportBtn) exportBtn.style.display = isAdmin() ? 'flex' : 'none';
   // Si el usuario cambia y ya no es admin, apagamos el modo edición
   // para que no quede un estado inconsistente/oculto.
   if(!isAdmin() && editModeFloors){
     editModeFloors = false;
     try{ localStorage.setItem(EDIT_MODE_FLOORS_KEY, 'off'); }catch(e){}
   }
+}
+
+// Empaqueta las fotos/posiciones que el admin ajustó en ESTE dispositivo
+// (guardadas en localStorage) en un único archivo descargable, para que
+// se lo pueda enviar a Claude y quedar fijas de forma permanente en el
+// código (en vez de depender de la memoria local de la tablet).
+function exportarFondosPlantas(){
+  const data = {};
+  FLOORS.forEach(floor=>{
+    data[floor.key] = {
+      hasCustomImage: !!getFloorBgImg(floor.key),
+      image: getFloorBgImg(floor.key),
+      position: getFloorBgPos(floor.key)
+    };
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fondos-plantas-export.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📤 Archivo descargado. Envíaselo a Claude en el chat.');
 }
 
 // =====================================================================
@@ -4791,6 +4826,13 @@ initSession();
 // =====================================================================
 const CHANGELOG_DATA = [
   {
+    version: 'v1.11',
+    date: '2026-09-30',
+    changes: [
+      'Modo edición: nuevo botón "Exportar fotos y posición de plantas", para enviar los ajustes hechos en la tablet y dejarlos fijos en el código.',
+    ]
+  },
+  {
     version: 'v1.10',
     date: '2026-09-30',
     changes: [
@@ -5048,6 +5090,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const exportBtn = document.getElementById('exportMigrationBtn');
   if(exportBtn) exportBtn.addEventListener('click', exportarDatosMigracion);
+
+  const exportFondosBtn = document.getElementById('exportFondosBtn');
+  if(exportFondosBtn) exportFondosBtn.addEventListener('click', exportarFondosPlantas);
 
   const importBtn = document.getElementById('importMigrationBtn');
   const importInput = document.getElementById('importMigrationInput');
