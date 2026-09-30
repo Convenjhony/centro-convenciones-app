@@ -759,6 +759,54 @@
     font-family:'JetBrains Mono', monospace;
   }
 
+  /* ---- Modo edición de fondos de plantas (solo admin/Jhony) ---- */
+  .floor-card.editing{
+    cursor:default;
+    outline:3px solid var(--color-accent);
+    outline-offset:2px;
+  }
+  .floor-card.editing .floor-card-bg{
+    cursor:grab;
+    touch-action:none;
+  }
+  .floor-card.editing .floor-card-bg:active{ cursor:grabbing; }
+  .floor-card-edit-controls{
+    position:absolute;
+    top:10px;
+    right:10px;
+    z-index:3;
+    display:flex;
+    gap:8px;
+  }
+  .floor-edit-btn{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.7);
+    background:rgba(0,0,0,0.55);
+    color:#fff;
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    padding:0;
+  }
+  .floor-card-edit-hint{
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:3;
+    background:rgba(0,0,0,0.55);
+    color:#fff;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.03em;
+    padding:5px 9px;
+    border-radius:8px;
+    pointer-events:none;
+  }
+
 
     background:none;
     border:none;
@@ -1539,6 +1587,17 @@
         <span class="toggle-switch-knob"></span>
       </button>
     </div>
+    <div class="settings-menu-item settings-menu-toggle-row" id="editModeFloorsRow" style="display:none;">
+      <span class="settings-menu-icon">🖼️</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Modo edición (fotos de plantas)</span>
+        <span class="settings-menu-desc">Subir y ajustar las fotos de Azotea, Planta Baja y Sótano</span>
+      </span>
+      <button type="button" id="editModeFloorsToggle" class="toggle-switch" role="switch" aria-checked="false">
+        <span class="toggle-switch-knob"></span>
+      </button>
+    </div>
+    <input type="file" id="floorImgInput" accept="image/*" style="display:none;">
     <button type="button" id="changePinBtn" class="settings-menu-item">
       <span class="settings-menu-icon">🔑</span>
       <span class="settings-menu-text">
@@ -2678,6 +2737,24 @@ let currentUser = null;
 // quién haya iniciado sesión.
 function applyTheme(){
   document.body.classList.toggle('theme-dark', !!(currentUser && currentUser.id === 'jhony'));
+  actualizarVisibilidadAdminUI();
+}
+
+// Jhony es el único usuario "administrador": es quien puede ver y usar
+// el modo edición de fotos de plantas.
+function isAdmin(){
+  return !!(currentUser && currentUser.id === 'jhony');
+}
+
+function actualizarVisibilidadAdminUI(){
+  const row = document.getElementById('editModeFloorsRow');
+  if(row) row.style.display = isAdmin() ? 'flex' : 'none';
+  // Si el usuario cambia y ya no es admin, apagamos el modo edición
+  // para que no quede un estado inconsistente/oculto.
+  if(!isAdmin() && editModeFloors){
+    editModeFloors = false;
+    try{ localStorage.setItem(EDIT_MODE_FLOORS_KEY, 'off'); }catch(e){}
+  }
 }
 
 // =====================================================================
@@ -2689,6 +2766,123 @@ try{
   const saved = localStorage.getItem(ALERTAS_RANGO_KEY);
   if(saved !== null) alertasRangoActivas = saved === 'on';
 }catch(e){}
+
+// =====================================================================
+// Modo edición de fotos de plantas (solo admin/Jhony)
+// Permite subir una foto propia para cada planta (Azotea/Planta Baja/
+// Sótano) y arrastrarla para ajustar el encuadre. Todo se guarda en
+// localStorage de este dispositivo (no viaja al repositorio ni se
+// comparte con otros dispositivos).
+// =====================================================================
+const EDIT_MODE_FLOORS_KEY = 'setting-edit-mode-floors';
+let editModeFloors = false;
+try{
+  const savedEdit = localStorage.getItem(EDIT_MODE_FLOORS_KEY);
+  if(savedEdit !== null) editModeFloors = savedEdit === 'on';
+}catch(e){}
+
+function floorBgImgKey(key){ return 'floorBgImg:' + key; }
+function floorBgPosKey(key){ return 'floorBgPos:' + key; }
+
+function getFloorBgImg(key){
+  try{ return localStorage.getItem(floorBgImgKey(key)); }catch(e){ return null; }
+}
+function getFloorBgPos(key){
+  try{ return localStorage.getItem(floorBgPosKey(key)) || '50% 50%'; }catch(e){ return '50% 50%'; }
+}
+function setFloorBgPos(key, val){
+  try{ localStorage.setItem(floorBgPosKey(key), val); }catch(e){}
+}
+function resetFloorBg(key){
+  try{
+    localStorage.removeItem(floorBgImgKey(key));
+    localStorage.removeItem(floorBgPosKey(key));
+  }catch(e){}
+}
+
+// Redimensiona/comprime la imagen elegida por el usuario antes de
+// guardarla (para no llenar el localStorage) y devuelve un dataURL JPEG.
+async function procesarImagenPlanta(file){
+  let bitmap;
+  try{
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  }catch(e){
+    // Fallback para navegadores sin soporte de imageOrientation
+    bitmap = await createImageBitmap(file);
+  }
+  const targetW = Math.min(1100, bitmap.width);
+  const targetH = Math.round(bitmap.height * (targetW / bitmap.width));
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+  return canvas.toDataURL('image/jpeg', 0.75);
+}
+
+// Arrastre para ajustar el encuadre (background-position) de la foto
+// de una planta. Funciona tanto sobre la foto por defecto como sobre
+// una subida por el usuario.
+function attachFloorDrag(bgEl, key){
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let startPosX = 50, startPosY = 50;
+
+  function parsePos(str){
+    const parts = str.split(' ').map(p => parseFloat(p));
+    return { x: isNaN(parts[0]) ? 50 : parts[0], y: isNaN(parts[1]) ? 50 : parts[1] };
+  }
+
+  bgEl.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    bgEl.setPointerCapture(e.pointerId);
+    startX = e.clientX;
+    startY = e.clientY;
+    const cur = parsePos(getFloorBgPos(key));
+    startPosX = cur.x;
+    startPosY = cur.y;
+  });
+
+  bgEl.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const rect = bgEl.getBoundingClientRect();
+    const deltaXPercent = ((e.clientX - startX) / rect.width) * 100;
+    const deltaYPercent = ((e.clientY - startY) / rect.height) * 100;
+    const newX = Math.max(0, Math.min(100, startPosX - deltaXPercent));
+    const newY = Math.max(0, Math.min(100, startPosY - deltaYPercent));
+    bgEl.style.backgroundPosition = `${newX}% ${newY}%`;
+  });
+
+  function finishDrag(e){
+    if(!dragging) return;
+    dragging = false;
+    setFloorBgPos(key, bgEl.style.backgroundPosition || '50% 50%');
+  }
+  bgEl.addEventListener('pointerup', finishDrag);
+  bgEl.addEventListener('pointercancel', finishDrag);
+}
+
+const floorImgInput = document.getElementById('floorImgInput');
+floorImgInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  const key = floorImgInput.dataset.targetFloor;
+  floorImgInput.value = '';
+  if(!file || !key) return;
+  try{
+    const dataUrl = await procesarImagenPlanta(file);
+    try{
+      localStorage.setItem(floorBgImgKey(key), dataUrl);
+      localStorage.setItem(floorBgPosKey(key), '50% 50%');
+    }catch(storageErr){
+      showToast('❌ No se pudo guardar la foto (memoria local llena). Probá con otra imagen.');
+      return;
+    }
+    renderFloorGrid();
+    showToast('✅ Foto actualizada. Arrastrá sobre la imagen para ajustar el encuadre.');
+  }catch(err){
+    showToast('❌ No se pudo procesar la imagen.');
+  }
+});
 
 // Interpreta el rango normal directamente del mismo texto que ya se
 // muestra al usuario (unit), para no duplicar ni desincronizar números.
@@ -2937,21 +3131,50 @@ function showFloorPickerScreen(){
 
 function renderFloorGrid(){
   floorGrid.innerHTML = '';
+  const modoEdicion = editModeFloors && isAdmin();
   FLOORS.forEach(floor=>{
     const salasDeEstaPlanta = SALAS.filter(s=>s.floor===floor.key);
     const card = document.createElement('div');
-    card.className = 'floor-card';
+    card.className = 'floor-card' + (modoEdicion ? ' editing' : '');
     card.setAttribute('data-floor', floor.key);
     card.innerHTML = `
       <div class="floor-card-bg"></div>
       <div class="floor-card-gloss"></div>
+      ${modoEdicion ? `
+        <p class="floor-card-edit-hint">Arrastrá para ajustar</p>
+        <div class="floor-card-edit-controls">
+          <button type="button" class="floor-edit-btn" data-action="upload" title="Subir foto">📷</button>
+          <button type="button" class="floor-edit-btn" data-action="reset" title="Restablecer foto original">↺</button>
+        </div>
+      ` : ''}
       <div class="floor-card-content">
         <p class="floor-card-eyebrow">${floor.eyebrow}</p>
         <p class="floor-card-name">${floor.name}</p>
         <p class="floor-card-desc">${salasDeEstaPlanta.length} sala${salasDeEstaPlanta.length===1?'':'s'}</p>
       </div>
     `;
-    card.addEventListener('click', ()=> selectFloor(floor.key));
+
+    const bgEl = card.querySelector('.floor-card-bg');
+    const customImg = getFloorBgImg(floor.key);
+    if(customImg) bgEl.style.backgroundImage = `url('${customImg}')`;
+    bgEl.style.backgroundPosition = getFloorBgPos(floor.key);
+
+    if(modoEdicion){
+      attachFloorDrag(bgEl, floor.key);
+      card.querySelector('[data-action="upload"]').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        floorImgInput.dataset.targetFloor = floor.key;
+        floorImgInput.click();
+      });
+      card.querySelector('[data-action="reset"]').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        resetFloorBg(floor.key);
+        renderFloorGrid();
+        showToast('↺ Foto restablecida a la original.');
+      });
+    }else{
+      card.addEventListener('click', ()=> selectFloor(floor.key));
+    }
     floorGrid.appendChild(card);
   });
 }
@@ -3341,6 +3564,21 @@ alertasRangoToggle.addEventListener('click', ()=>{
   showToast(alertasRangoActivas ? 'Alertas de rango activadas.' : 'Alertas de rango desactivadas.');
   // Si hay un checklist abierto en este momento, refrescarlo para que se note al instante
   if(currentSala && draft) renderChecklist();
+});
+
+// Interruptor de modo edición de fotos de plantas (solo admin/Jhony)
+const editModeFloorsToggle = document.getElementById('editModeFloorsToggle');
+function actualizarEditModeToggleVisual(){
+  editModeFloorsToggle.classList.toggle('on', editModeFloors);
+  editModeFloorsToggle.setAttribute('aria-checked', String(editModeFloors));
+}
+actualizarEditModeToggleVisual();
+editModeFloorsToggle.addEventListener('click', ()=>{
+  editModeFloors = !editModeFloors;
+  try{ localStorage.setItem(EDIT_MODE_FLOORS_KEY, editModeFloors ? 'on' : 'off'); }catch(e){}
+  actualizarEditModeToggleVisual();
+  showToast(editModeFloors ? '🖼️ Modo edición activado — subí o arrastrá las fotos de las plantas.' : 'Modo edición desactivado.');
+  if(floorPicker.style.display !== 'none') renderFloorGrid();
 });
 
 async function selectSala(key){
@@ -4552,6 +4790,15 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.10',
+    date: '2026-09-30',
+    changes: [
+      'Nuevo "Modo edición" en Configuración, exclusivo para el usuario Jhony (administrador).',
+      'En modo edición: subir una foto propia para el fondo de cada planta (Azotea, Planta Baja, Sótano) y arrastrarla para ajustar el encuadre.',
+      'Botón de restablecer por planta, para volver a la foto original en cualquier momento.',
+    ]
+  },
   {
     version: 'v1.09',
     date: '2026-09-30',
