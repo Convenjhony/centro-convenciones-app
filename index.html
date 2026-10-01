@@ -807,22 +807,6 @@
     pointer-events:none;
   }
 
-
-    background:none;
-    border:none;
-    color:var(--color-accent);
-    font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
-    letter-spacing:0.04em;
-    text-transform:uppercase;
-    cursor:pointer;
-    padding:0;
-    margin:0 0 8px;
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-  }
-
   /* ---- Tarjetas de selección (dropdown) para puntos de muestra ---- */
   .task-card.select-card{
     flex-direction:column;
@@ -1029,7 +1013,7 @@
      (selector de plantas y selector de salas), así que se fijan como un
      panel flotante anclado arriba de la pantalla en vez de empujar el
      contenido — así se ven bien sin importar desde dónde se abran. */
-  #settingsPanel, #changelogPanel{
+  #settingsPanel, #changelogPanel, #pinsAdminPanel{
     position:fixed;
     top:72px;
     left:16px;
@@ -1041,7 +1025,7 @@
     box-shadow:0 14px 34px rgba(0,0,0,0.28);
   }
   @media (min-width:792px){
-    #settingsPanel, #changelogPanel{ left:50%; right:auto; transform:translateX(-50%); width:760px; }
+    #settingsPanel, #changelogPanel, #pinsAdminPanel{ left:50%; right:auto; transform:translateX(-50%); width:760px; }
   }
   .notif-panel-head{
     display:flex;
@@ -1598,6 +1582,14 @@
       </button>
     </div>
     <input type="file" id="floorImgInput" accept="image/*" style="display:none;">
+    <button type="button" id="viewPinsBtn" class="settings-menu-item" style="display:none;">
+      <span class="settings-menu-icon">👀</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Ver PIN de usuarios</span>
+        <span class="settings-menu-desc">Solo vos podés ver esto, como administrador</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
     <button type="button" id="changePinBtn" class="settings-menu-item">
       <span class="settings-menu-icon">🔑</span>
       <span class="settings-menu-text">
@@ -1650,6 +1642,17 @@
   </div>
   <div class="settings-menu" id="changelogList">
     <!-- Se llena dinámicamente desde CHANGELOG_DATA -->
+  </div>
+</div>
+
+<!-- ===================== MODAL: PIN DE USUARIOS (solo admin) ===================== -->
+<div id="pinsAdminPanel" class="notif-panel" style="display:none;">
+  <div class="notif-panel-head">
+    <p class="notif-panel-title">👀 PIN de usuarios</p>
+    <button type="button" id="pinsAdminCloseBtn" class="notif-close">✕</button>
+  </div>
+  <div class="settings-menu" id="pinsAdminList">
+    <!-- Se llena dinámicamente desde USERS -->
   </div>
 </div>
 
@@ -2749,12 +2752,36 @@ function isAdmin(){
 function actualizarVisibilidadAdminUI(){
   const row = document.getElementById('editModeFloorsRow');
   if(row) row.style.display = isAdmin() ? 'flex' : 'none';
+  const viewPinsBtn = document.getElementById('viewPinsBtn');
+  if(viewPinsBtn) viewPinsBtn.style.display = isAdmin() ? 'flex' : 'none';
   // Si el usuario cambia y ya no es admin, apagamos el modo edición
   // para que no quede un estado inconsistente/oculto.
   if(!isAdmin() && editModeFloors){
     editModeFloors = false;
     try{ localStorage.setItem(EDIT_MODE_FLOORS_KEY, 'off'); }catch(e){}
   }
+}
+
+// Lista, para el administrador (Jhony), el PIN actual de cada usuario
+// (si ya fue creado/cambiado desde que existe esta función — los PIN
+// previos solo tienen el hash, que no se puede revertir).
+function renderPinsAdmin(){
+  const list = document.getElementById('pinsAdminList');
+  if(!list) return;
+  list.innerHTML = USERS.map(u=>{
+    let pin = null;
+    try{ pin = localStorage.getItem(pinPlainKey(u.id)); }catch(e){}
+    const valor = pin ? `<strong>${escapeHtml(pin)}</strong>` : '<em>No disponible (no se volvió a crear desde esta actualización)</em>';
+    return `
+      <div class="settings-menu-item" style="cursor:default;">
+        <span class="settings-menu-icon">${u.avatar || '👤'}</span>
+        <span class="settings-menu-text">
+          <span class="settings-menu-title">${escapeHtml(u.name)}</span>
+          <span class="settings-menu-desc">${valor}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
 }
 
 // =====================================================================
@@ -2968,6 +2995,12 @@ let pinFlowContext = null; // 'login' | 'settings' — para saber a dónde volve
 let pinPrimerValor = '';
 
 function pinKey(userId){ return `user-pin-hash:${userId}`; }
+// Copia en texto plano del PIN, guardada SOLO para que el administrador
+// (Jhony) pueda consultarla desde Configuración si alguien se olvida el
+// suyo. Se guarda recién cuando alguien crea/cambia su PIN de ahora en
+// adelante — los PIN ya creados antes de esta actualización no quedan
+// visibles hasta que esa persona lo vuelva a crear.
+function pinPlainKey(userId){ return `user-pin-plain:${userId}`; }
 
 // Hash simple (no criptográfico) para no depender de crypto.subtle, que
 // requiere un "contexto seguro" (HTTPS) y puede fallar al abrir la app
@@ -3081,7 +3114,10 @@ pinConfirmBtn.addEventListener('click', async ()=>{
       return;
     }
     const hash = hashSimplePin(val, pinTargetUser.id);
-    try{ localStorage.setItem(pinKey(pinTargetUser.id), hash); }catch(e){}
+    try{
+      localStorage.setItem(pinKey(pinTargetUser.id), hash);
+      localStorage.setItem(pinPlainKey(pinTargetUser.id), val);
+    }catch(e){}
 
     if(pinFlowContext === 'login'){
       currentUser = pinTargetUser;
@@ -3099,7 +3135,10 @@ pinConfirmBtn.addEventListener('click', async ()=>{
 
 pinForgotBtn.addEventListener('click', ()=>{
   if(!confirm(`¿Reiniciar el PIN de ${pinTargetUser.name}? Vas a poder crear uno nuevo ahora mismo.`)) return;
-  try{ localStorage.removeItem(pinKey(pinTargetUser.id)); }catch(e){}
+  try{
+    localStorage.removeItem(pinKey(pinTargetUser.id));
+    localStorage.removeItem(pinPlainKey(pinTargetUser.id));
+  }catch(e){}
   pinFlowMode = 'create1';
   pinModalTitle.textContent = 'Creá un nuevo PIN de 4 dígitos';
   pinForgotBtn.style.display = 'none';
@@ -3216,7 +3255,10 @@ function showSalaPickerScreen(){
   renderNotificaciones();
 }
 
-switchUserBtn.addEventListener('click', ()=>{
+// Vuelve a la pantalla de selección de usuario y cierra la sesión actual.
+// La usan tanto "Cambiar usuario" (manual) como el cierre automático por
+// inactividad.
+function cerrarSesion(){
   currentUser = null;
   currentFloor = null;
   try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
@@ -3227,16 +3269,61 @@ switchUserBtn.addEventListener('click', ()=>{
   userPicker.style.display = 'block';
   window.scrollTo(0,0);
   applyTheme();
+}
+
+switchUserBtn.addEventListener('click', cerrarSesion);
+
+// =====================================================================
+// Cierre de sesión automático por inactividad (2 horas). En una tablet
+// compartida, evita que el último usuario que la usó quede logueado
+// indefinidamente. Se registra actividad en localStorage (no solo en
+// memoria) porque el navegador puede suspender la app en segundo plano
+// y perder cualquier timer vivo.
+// =====================================================================
+const LAST_ACTIVITY_KEY = 'session-last-activity';
+const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 horas
+let ultimoRegistroActividad = 0;
+
+function registrarActividad(){
+  const ahora = Date.now();
+  if(ahora - ultimoRegistroActividad < 60000) return; // throttle: máx. 1 vez por minuto
+  ultimoRegistroActividad = ahora;
+  try{ localStorage.setItem(LAST_ACTIVITY_KEY, String(ahora)); }catch(e){}
+}
+
+function sesionExpiradaPorInactividad(){
+  let last = null;
+  try{ last = parseInt(localStorage.getItem(LAST_ACTIVITY_KEY) || '0', 10); }catch(e){ return false; }
+  if(!last) return false;
+  return (Date.now() - last) > INACTIVITY_TIMEOUT_MS;
+}
+
+function verificarInactividad(){
+  if(!currentUser) return;
+  if(sesionExpiradaPorInactividad()){
+    cerrarSesion();
+    showToast('Sesión cerrada por inactividad. Volvé a elegir tu usuario.');
+  }
+}
+
+['click','touchstart','keydown'].forEach(evt=>{
+  document.addEventListener(evt, registrarActividad, { passive:true });
 });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') verificarInactividad();
+});
+setInterval(verificarInactividad, 5 * 60 * 1000); // chequeo periódico cada 5 min
 
 function initSession(){
   renderUserPicker();
   let savedId = null;
   try{ savedId = localStorage.getItem(SESSION_KEY); }catch(e){}
-  if(savedId && USERS.some(u=>u.id===savedId)){
+  if(savedId && USERS.some(u=>u.id===savedId) && !sesionExpiradaPorInactividad()){
     currentUser = USERS.find(u=>u.id===savedId);
+    registrarActividad();
     showFloorPickerScreen();
   } else {
+    if(savedId) try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
     userPicker.style.display = 'block';
     salaPicker.style.display = 'none';
     floorPicker.style.display = 'none';
@@ -3331,6 +3418,19 @@ function showToast(msg){
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   setTimeout(()=>toastEl.classList.remove('show'), 2200);
+}
+
+// Neutraliza caracteres HTML especiales antes de insertar texto libre
+// (escrito por el personal: Observaciones, Responsable, detalle de
+// fallo, "Otro") dentro de innerHTML, para que nunca se interprete
+// como código aunque alguien escriba algo con < > " ' &.
+function escapeHtml(text){
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // =====================================================================
@@ -4009,7 +4109,7 @@ function buildInventoryCard(item, state){
       <button type="button" class="btn-restock">＋ Reponer stock</button>
     </div>
     <div class="inventory-row">
-      <input type="number" min="0" inputmode="numeric" class="inventory-input" placeholder="Colocadas hoy" value="${state.value || ''}">
+      <input type="number" min="0" inputmode="numeric" class="inventory-input" placeholder="Colocadas hoy" value="${escapeHtml(state.value || '')}">
       <span class="inventory-preview">Quedarán: <strong>${quedanPreview}</strong> ${unit}</span>
     </div>
   `;
@@ -4322,27 +4422,29 @@ async function loadHistory(){
           <span class="history-date">${d.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})}</span>
           <span class="history-score ${complete ? '' : 'incomplete'}">${rec.completed}/${rec.total} tareas</span>
         </div>
-        <p class="history-resp">Responsable: ${rec.responsible || '—'}</p>
+        <p class="history-resp">Responsable: ${escapeHtml(rec.responsible) || '—'}</p>
         <div class="history-items">
           ${rec.items.map(it=>{
             const meta = ITEMS.find(x=>x.id===it.id);
             const name = meta ? meta.label.split('—')[0].trim() : it.id;
+            const val = escapeHtml(it.value);
+            const detail = escapeHtml(it.detail);
             let label;
             if(it.type === 'inventory'){
               label = it.done
-                ? `${name}: ${it.value} colocadas${it.stockAntes !== undefined ? ` (stock ${it.stockAntes}→${it.stockDespues})` : ''}`
+                ? `${name}: ${val} colocadas${it.stockAntes !== undefined ? ` (stock ${it.stockAntes}→${it.stockDespues})` : ''}`
                 : `${name}: —`;
             } else if(it.type === 'faultselect'){
-              label = it.done ? `${name}: ${it.value}${it.detail ? ' ('+it.detail+')' : ''}` : `${name}: —`;
+              label = it.done ? `${name}: ${val}${it.detail ? ' ('+detail+')' : ''}` : `${name}: —`;
             } else if(it.type === 'value' || it.type === 'select'){
-              label = it.done ? `${name}: ${it.value}` : `${name}: —`;
+              label = it.done ? `${name}: ${val}` : `${name}: —`;
             } else {
               label = `${it.done ? '✓ ':''}${name}`;
             }
             return `<span class="chip ${it.done ? 'ok':''}">${label}</span>`;
           }).join('')}
         </div>
-        ${rec.observations ? `<div class="history-obs">${rec.observations}</div>` : ''}
+        ${rec.observations ? `<div class="history-obs">${escapeHtml(rec.observations)}</div>` : ''}
         <div class="history-foot">
           <button class="btn-delete-item" data-key="${key}">🗑 Eliminar este registro</button>
         </div>
@@ -4791,6 +4893,16 @@ initSession();
 // =====================================================================
 const CHANGELOG_DATA = [
   {
+    version: 'v1.13',
+    date: '2026-10-01',
+    changes: [
+      'Seguridad: el texto libre (Observaciones, Responsable, detalle de fallo) ya no puede insertar código al mostrarse en el Historial.',
+      'Nuevo: cierre de sesión automático después de 2 horas sin uso, para no dejar una sesión abierta indefinidamente en la tablet.',
+      'Nuevo (solo administrador/Jhony): "Ver PIN de usuarios" en Configuración, para poder recordárselo a alguien que lo olvidó.',
+      'Limpieza de código: se quitó una regla CSS inválida que había quedado de una edición anterior.',
+    ]
+  },
+  {
     version: 'v1.08',
     date: '2026-09-30',
     changes: [
@@ -5028,6 +5140,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if(changelogCloseBtn && changelogPanel){
     changelogCloseBtn.addEventListener('click', () => { changelogPanel.style.display = 'none'; });
+  }
+
+  const viewPinsBtn = document.getElementById('viewPinsBtn');
+  const pinsAdminPanel = document.getElementById('pinsAdminPanel');
+  const pinsAdminCloseBtn = document.getElementById('pinsAdminCloseBtn');
+  if(viewPinsBtn && pinsAdminPanel){
+    viewPinsBtn.addEventListener('click', () => {
+      document.getElementById('settingsPanel').style.display = 'none';
+      renderPinsAdmin();
+      pinsAdminPanel.style.display = 'block';
+    });
+  }
+  if(pinsAdminCloseBtn && pinsAdminPanel){
+    pinsAdminCloseBtn.addEventListener('click', () => { pinsAdminPanel.style.display = 'none'; });
   }
 
   const checkUpdateBtn = document.getElementById('checkUpdateBtn');
