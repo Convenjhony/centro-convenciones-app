@@ -1207,6 +1207,47 @@
     text-align:center;
   }
 
+  /* ---- Recordatorio de respaldo completo (pantalla de plantas) ---- */
+  .backup-reminder-banner{
+    max-width:760px;
+    margin:0 auto 16px;
+    background:#FBEFE2;
+    color:#8A5A1E;
+    border:1px solid #E9CDA0;
+    border-radius:12px;
+    padding:12px 16px;
+    font-size:13px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .backup-reminder-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .backup-reminder-btn{
+    background:#8A5A1E;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .backup-reminder-snooze{
+    background:none;
+    border:none;
+    color:#8A5A1E;
+    text-decoration:underline;
+    font-size:12.5px;
+    cursor:pointer;
+    padding:8px 4px;
+  }
+
 
 
 
@@ -1535,6 +1576,21 @@
   </div>
 </div>
 
+<!-- ===================== MODAL: SUBIR RESPALDO A GITHUB (solo admin) ===================== -->
+<div id="githubBackupModal" class="pin-modal-overlay" style="display:none;">
+  <div class="pin-modal-box">
+    <p class="pin-modal-user">☁️ Subir respaldo a GitHub</p>
+    <p class="pin-modal-title">Pegá un token de GitHub con permiso de escritura solo sobre este repositorio (lo podés revocar apenas termine). Nunca se guarda en la app.</p>
+    <input type="password" id="githubTokenInput" class="pin-input fecha-input" autocomplete="off" placeholder="github_pat_…" style="font-size:13px; letter-spacing:0;">
+    <p class="pin-modal-error" id="githubBackupError" style="display:none;"></p>
+    <p class="pin-modal-user" id="githubBackupProgress" style="display:none; font-size:12px; margin-top:8px;"></p>
+    <div class="pin-modal-actions">
+      <button type="button" id="githubBackupCancelBtn" class="btn btn-secondary">Cancelar</button>
+      <button type="button" id="githubBackupConfirmBtn" class="btn btn-save">Subir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== SELECTOR DE PLANTAS ===================== -->
 <div id="floorPicker" style="display:none;">
   <div class="picker-header">
@@ -1542,6 +1598,13 @@
     <p class="picker-eyebrow">Centro de Convenciones</p>
     <h1>Elegí una planta</h1>
     <p class="picker-sub" id="floorGreeting">Elegí la planta para ver sus salas.</p>
+  </div>
+  <div id="backupReminderBanner" class="backup-reminder-banner" style="display:none;">
+    <span id="backupReminderText"></span>
+    <div class="backup-reminder-actions">
+      <button type="button" id="backupReminderNowBtn" class="backup-reminder-btn">📦 Respaldar ahora</button>
+      <button type="button" id="backupReminderSnoozeBtn" class="backup-reminder-snooze">Recordar mañana</button>
+    </div>
   </div>
   <div class="floor-grid" id="floorGrid"></div>
 </div>
@@ -1587,6 +1650,14 @@
       <span class="settings-menu-text">
         <span class="settings-menu-title">Ver PIN de usuarios</span>
         <span class="settings-menu-desc">Solo vos podés ver esto, como administrador</span>
+      </span>
+      <span class="settings-menu-arrow">→</span>
+    </button>
+    <button type="button" id="githubBackupBtn" class="settings-menu-item" style="display:none;">
+      <span class="settings-menu-icon">☁️</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Subir respaldo a GitHub</span>
+        <span class="settings-menu-desc">Bajo demanda, con un token temporal (solo administrador)</span>
       </span>
       <span class="settings-menu-arrow">→</span>
     </button>
@@ -2754,6 +2825,8 @@ function actualizarVisibilidadAdminUI(){
   if(row) row.style.display = isAdmin() ? 'flex' : 'none';
   const viewPinsBtn = document.getElementById('viewPinsBtn');
   if(viewPinsBtn) viewPinsBtn.style.display = isAdmin() ? 'flex' : 'none';
+  const githubBackupBtn = document.getElementById('githubBackupBtn');
+  if(githubBackupBtn) githubBackupBtn.style.display = isAdmin() ? 'flex' : 'none';
   // Si el usuario cambia y ya no es admin, apagamos el modo edición
   // para que no quede un estado inconsistente/oculto.
   if(!isAdmin() && editModeFloors){
@@ -3166,6 +3239,8 @@ function showFloorPickerScreen(){
     floorGreeting.textContent = `👋 Hola, ${currentUser.name} — elegí la planta para ver sus salas.`;
   }
   renderFloorGrid();
+  purgarHistorialSiCorresponde();
+  mostrarRecordatorioBackupSiCorresponde();
 }
 
 function renderFloorGrid(){
@@ -3567,6 +3642,93 @@ document.getElementById('notifCloseBtn').addEventListener('click', ()=>{
 });
 
 // =====================================================================
+// Recordatorio de respaldo + purga de historial viejo ya respaldado
+// (puntos 2.2 y "backups automáticos" de la auditoría de seguridad).
+//
+// No hay forma segura de subir un backup a la nube de forma 100%
+// desatendida sin guardar una credencial en el código (ver documento de
+// auditoría), así que esto es lo más automático que se puede hacer sin
+// crear un riesgo nuevo: recordarle a la persona que respalde, y una vez
+// que algo YA está respaldado en un Excel, liberar espacio solo.
+// =====================================================================
+const LAST_BACKUP_KEY = 'last-full-backup-ts';
+const BACKUP_SNOOZE_KEY = 'backup-reminder-snooze-until';
+const LAST_PURGE_KEY = 'last-history-purge-ts';
+const BACKUP_REMINDER_DIAS = 7;   // avisar si pasaron 7+ días sin respaldo
+const RETENTION_MESES = 6;        // borrar solo lo que además sea más viejo que esto
+
+function hayAlgunRegistroGuardado(){
+  return SALAS.some(sala => store.listKeys(`combo-historial:${sala.key}:`).length > 0);
+}
+
+function diasDesdeUltimoBackup(){
+  let last = 0;
+  try{ last = parseInt(localStorage.getItem(LAST_BACKUP_KEY) || '0', 10); }catch(e){}
+  if(!last) return null; // nunca se hizo un respaldo
+  return Math.floor((Date.now() - last) / (24*60*60*1000));
+}
+
+function mostrarRecordatorioBackupSiCorresponde(){
+  const banner = document.getElementById('backupReminderBanner');
+  if(!banner) return;
+  if(!hayAlgunRegistroGuardado()){ banner.style.display = 'none'; return; }
+
+  let snoozeUntil = 0;
+  try{ snoozeUntil = parseInt(localStorage.getItem(BACKUP_SNOOZE_KEY) || '0', 10); }catch(e){}
+  if(Date.now() < snoozeUntil){ banner.style.display = 'none'; return; }
+
+  const dias = diasDesdeUltimoBackup();
+  if(dias === null){
+    document.getElementById('backupReminderText').textContent = '📦 Todavía no se hizo ningún respaldo completo. Te recomiendo hacer uno.';
+  } else if(dias >= BACKUP_REMINDER_DIAS){
+    document.getElementById('backupReminderText').textContent = `📦 Hace ${dias} días que no se hace un respaldo completo.`;
+  } else {
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'flex';
+}
+
+function ocultarRecordatorioBackup(){
+  const banner = document.getElementById('backupReminderBanner');
+  if(banner) banner.style.display = 'none';
+}
+
+// Borra, por sala, los registros que sean a la vez: (a) más viejos que
+// RETENTION_MESES, y (b) ya incluidos en un "Respaldo completo" previo
+// (marca guardada en exportBackupCompleto). Un registro nunca respaldado
+// no se toca, sin importar la antigüedad.
+function purgarHistorialAntiguo(){
+  const limiteMs = Date.now() - RETENTION_MESES * 30 * 24 * 60 * 60 * 1000;
+  let totalBorrados = 0;
+  SALAS.forEach(sala=>{
+    let backedUntil = 0;
+    try{ backedUntil = parseInt(localStorage.getItem(`backup-done-until:${sala.key}`) || '0', 10); }catch(e){}
+    if(!backedUntil) return;
+    const prefix = `combo-historial:${sala.key}:`;
+    store.listKeys(prefix).forEach(k=>{
+      const rec = store.get(k);
+      if(!rec) return;
+      if(rec.date <= backedUntil && rec.date < limiteMs){
+        store.remove(k);
+        totalBorrados++;
+      }
+    });
+  });
+  try{ localStorage.setItem(LAST_PURGE_KEY, String(Date.now())); }catch(e){}
+  return totalBorrados;
+}
+
+// Chequeo automático de purga, como máximo una vez por día (no hace
+// falta recalcular esto en cada pantalla).
+function purgarHistorialSiCorresponde(){
+  let last = 0;
+  try{ last = parseInt(localStorage.getItem(LAST_PURGE_KEY) || '0', 10); }catch(e){}
+  if(Date.now() - last < 24*60*60*1000) return;
+  purgarHistorialAntiguo();
+}
+
+// =====================================================================
 // Respaldo completo: exporta el historial de las 11 salas, una detrás
 // de otra, reutilizando exactamente el mismo mecanismo de exportación
 // de cada sala (la plantilla original para Calidad del Agua, y el
@@ -3602,7 +3764,8 @@ async function exportBackupCompleto(){
   let hechas = 0;
   for(const sala of SALAS){
     const prefix = `combo-historial:${sala.key}:`;
-    if(store.listKeys(prefix).length === 0) continue;
+    const keysSala = store.listKeys(prefix);
+    if(keysSala.length === 0) continue;
 
     currentSala = sala;
     ITEMS = sala.groups.flatMap(g=>g.items);
@@ -3617,6 +3780,20 @@ async function exportBackupCompleto(){
     } else {
       exportGenericoMultiHoja();
     }
+
+    // Marcamos hasta qué fecha quedó respaldada esta sala, para que la
+    // purga automática del historial (ver 2.2) sepa qué registros ya
+    // están a salvo en un Excel y pueda borrarlos con confianza más
+    // adelante, sin perder nada que no se haya respaldado todavía.
+    let maxFecha = 0;
+    keysSala.forEach(k=>{
+      const rec = store.get(k);
+      if(rec && rec.date > maxFecha) maxFecha = rec.date;
+    });
+    if(maxFecha > 0){
+      try{ localStorage.setItem(`backup-done-until:${sala.key}`, String(maxFecha)); }catch(e){}
+    }
+
     hechas++;
     await new Promise(r => setTimeout(r, 700)); // pausa breve entre descargas
   }
@@ -3632,9 +3809,155 @@ async function exportBackupCompleto(){
   btn.disabled = false;
   tituloEl.textContent = tituloOriginal;
   showToast(`Respaldo completo: ${hechas} archivo(s) descargado(s).`);
+
+  try{ localStorage.setItem(LAST_BACKUP_KEY, String(Date.now())); }catch(e){}
+  ocultarRecordatorioBackup();
+  const borrados = purgarHistorialAntiguo();
+  if(borrados > 0) showToast(`Se liberaron ${borrados} registro(s) viejo(s) ya respaldados.`);
 }
 
 document.getElementById('fullBackupBtn').addEventListener('click', exportBackupCompleto);
+
+document.getElementById('backupReminderNowBtn').addEventListener('click', exportBackupCompleto);
+document.getElementById('backupReminderSnoozeBtn').addEventListener('click', ()=>{
+  try{ localStorage.setItem(BACKUP_SNOOZE_KEY, String(Date.now() + 24*60*60*1000)); }catch(e){}
+  ocultarRecordatorioBackup();
+  showToast('Te lo vuelvo a recordar mañana.');
+});
+
+// =====================================================================
+// Subir respaldo a GitHub bajo demanda (capa 3 de la propuesta de
+// backups de la auditoría). A propósito NO es automático: pide un token
+// cada vez, no lo guarda en ningún lado, y solo administrador (Jhony) lo
+// ve. Sube un Excel por sala con datos a respaldos/<fecha>/<sala>.xlsx
+// en el mismo repositorio de la app.
+// =====================================================================
+const GITHUB_OWNER = 'Convenjhony';
+const GITHUB_REPO = 'centro-convenciones-app';
+
+function blobToBase64(blob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function githubSubirArchivo(token, repoPath, blob, mensaje){
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${repoPath}`;
+  const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' };
+
+  let sha;
+  const getResp = await fetch(url, { headers });
+  if(getResp.status === 200){
+    const info = await getResp.json();
+    sha = info.sha;
+  } else if(getResp.status !== 404){
+    throw new Error(`No se pudo consultar ${repoPath} (${getResp.status}).`);
+  }
+
+  const contentB64 = await blobToBase64(blob);
+  const putResp = await fetch(url, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: mensaje, content: contentB64, branch: 'main', ...(sha ? { sha } : {}) })
+  });
+  if(!putResp.ok){
+    if(putResp.status === 401) throw new Error('Token inválido o sin permiso de escritura.');
+    throw new Error(`Falló la subida de ${repoPath} (${putResp.status}).`);
+  }
+}
+
+async function subirRespaldoAGithub(token){
+  const progressEl = document.getElementById('githubBackupProgress');
+  const errorEl = document.getElementById('githubBackupError');
+  const confirmBtn = document.getElementById('githubBackupConfirmBtn');
+  errorEl.style.display = 'none';
+
+  const salasConDatos = SALAS.filter(sala => store.listKeys(`combo-historial:${sala.key}:`).length > 0);
+  if(salasConDatos.length === 0){
+    errorEl.textContent = 'Todavía no hay ningún registro guardado en ninguna sala.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  confirmBtn.disabled = true;
+  progressEl.style.display = 'block';
+
+  const salaPrevia = currentSala;
+  const fechaStr = new Date().toISOString().slice(0,10);
+  let hechas = 0;
+
+  try{
+    for(const sala of salasConDatos){
+      progressEl.textContent = `Subiendo… (${hechas+1}/${salasConDatos.length}) ${sala.name}`;
+
+      currentSala = sala;
+      ITEMS = sala.groups.flatMap(g=>g.items);
+      DRAFT_KEY = `combo-draft:${sala.key}`;
+      HIST_PREFIX = `combo-historial:${sala.key}:`;
+
+      const resultado = sala.key === 'calidadagua'
+        ? await exportCalidadAguaConPlantilla(true)
+        : exportGenericoMultiHoja(true);
+      if(!resultado) continue; // sala sin registros nuevos en este momento
+
+      const repoPath = `respaldos/${fechaStr}/${sala.key}.xlsx`;
+      await githubSubirArchivo(token, repoPath, resultado.blob, `Respaldo ${fechaStr}: ${sala.name}`);
+
+      // Misma marca de "ya respaldado" que usa el respaldo local, para
+      // que la purga automática del historial sepa que esto está a salvo.
+      const keysSala = store.listKeys(`combo-historial:${sala.key}:`);
+      let maxFecha = 0;
+      keysSala.forEach(k=>{ const rec = store.get(k); if(rec && rec.date > maxFecha) maxFecha = rec.date; });
+      if(maxFecha > 0) try{ localStorage.setItem(`backup-done-until:${sala.key}`, String(maxFecha)); }catch(e){}
+
+      hechas++;
+    }
+
+    try{ localStorage.setItem(LAST_BACKUP_KEY, String(Date.now())); }catch(e){}
+    ocultarRecordatorioBackup();
+    const borrados = purgarHistorialAntiguo();
+
+    document.getElementById('githubBackupModal').style.display = 'none';
+    document.getElementById('githubTokenInput').value = '';
+    showToast(`Respaldo subido a GitHub: ${hechas} archivo(s).` + (borrados > 0 ? ` Se liberaron ${borrados} registro(s) viejo(s).` : ''));
+  }catch(e){
+    errorEl.textContent = e.message || 'Error al subir el respaldo. Revisá el token y la conexión.';
+    errorEl.style.display = 'block';
+  }finally{
+    if(salaPrevia){
+      currentSala = salaPrevia;
+      ITEMS = salaPrevia.groups.flatMap(g=>g.items);
+      DRAFT_KEY = `combo-draft:${salaPrevia.key}`;
+      HIST_PREFIX = `combo-historial:${salaPrevia.key}:`;
+    }
+    confirmBtn.disabled = false;
+    progressEl.style.display = 'none';
+  }
+}
+
+document.getElementById('githubBackupBtn').addEventListener('click', ()=>{
+  document.getElementById('settingsPanel').style.display = 'none';
+  document.getElementById('githubBackupError').style.display = 'none';
+  document.getElementById('githubTokenInput').value = '';
+  document.getElementById('githubBackupModal').style.display = 'flex';
+});
+document.getElementById('githubBackupCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('githubBackupModal').style.display = 'none';
+  document.getElementById('githubTokenInput').value = '';
+});
+document.getElementById('githubBackupConfirmBtn').addEventListener('click', ()=>{
+  const token = document.getElementById('githubTokenInput').value.trim();
+  const errorEl = document.getElementById('githubBackupError');
+  if(!token){
+    errorEl.textContent = 'Pegá un token antes de continuar.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  subirRespaldoAGithub(token);
+});
 
 function toggleSettingsPanel(){
   const panel = document.getElementById('settingsPanel');
@@ -4526,7 +4849,10 @@ function setTemplateCellXL(ws, ref, value, forceType){
   }
 }
 
-async function exportCalidadAguaConPlantilla(){
+// Con returnBlob=true, en vez de descargar el archivo, devuelve
+// { blob, filename } sin tocar el DOM — lo usa la subida de respaldo a
+// GitHub (ver más abajo) para generar el Excel en memoria.
+async function exportCalidadAguaConPlantilla(returnBlob){
   const draftRecordsKeys = store.listKeys(HIST_PREFIX);
   if(draftRecordsKeys.length === 0){
     showToast('Todavía no hay registros para exportar.');
@@ -4537,8 +4863,7 @@ async function exportCalidadAguaConPlantilla(){
 
   if(typeof ExcelJS === 'undefined' || typeof CALIDAD_AGUA_TEMPLATE_B64 === 'undefined'){
     showToast('No se pudo cargar la plantilla original. Se exportará en formato estándar.');
-    exportGenericoMultiHoja();
-    return;
+    return exportGenericoMultiHoja(returnBlob);
   }
 
   showToast('Preparando Excel con el formato original…');
@@ -4652,10 +4977,16 @@ async function exportCalidadAguaConPlantilla(){
   try{
     const outBuffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([outBuffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const filename = `${currentSala.exportFileName || 'Control de la calidad del agua'}.xlsx`;
+
+    if(returnBlob){
+      return { blob, filename };
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${currentSala.exportFileName || 'Control de la calidad del agua'}.xlsx`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -4677,7 +5008,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   exportGenericoMultiHoja();
 });
 
-function exportGenericoMultiHoja(){
+function exportGenericoMultiHoja(returnBlob){
   const keys = store.listKeys(HIST_PREFIX);
   if(keys.length === 0){
     showToast('Todavía no hay registros para exportar.');
@@ -4849,6 +5180,13 @@ function exportGenericoMultiHoja(){
   });
 
   const fileName = currentSala.exportFileName || `historial_${currentSala.key}`;
+
+  if(returnBlob){
+    const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    const blob = new Blob([wbout], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    return { blob, filename: `${fileName}.xlsx` };
+  }
+
   XLSX.writeFile(wb, `${fileName}.xlsx`);
   showToast(`Descargando archivo Excel (${currentSala.groups.length} hojas)…`);
 }
@@ -4892,6 +5230,15 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.14',
+    date: '2026-10-01',
+    changes: [
+      'Nuevo: recordatorio de respaldo completo cuando pasan 7+ días sin hacer uno, con botón para respaldar al toque o posponer un día.',
+      'Nuevo: el historial libera solo los registros que ya estén respaldados en un Excel y tengan más de 6 meses — nunca borra algo sin respaldar.',
+      'Nuevo (solo administrador/Jhony): "Subir respaldo a GitHub" bajo demanda, con un token temporal que nunca se guarda.',
+    ]
+  },
   {
     version: 'v1.13',
     date: '2026-10-01',
