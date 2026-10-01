@@ -3,11 +3,11 @@
 //
 // IMPORTANTE PARA FUTURAS ACTUALIZACIONES:
 // Cada vez que subas una versión nueva del código, tenés que cambiar
-// el número de CACHE_VERSION de abajo (ej. de 'v1.12' a 'v1.13'). Usamos
+// el número de CACHE_VERSION de abajo (ej. de 'v1.13' a 'v1.14'). Usamos
 // v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea
 // un cambio grande de verdad.
 // =====================================================================
-const CACHE_VERSION = 'v1.12';
+const CACHE_VERSION = 'v1.13';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
