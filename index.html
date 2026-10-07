@@ -1919,8 +1919,53 @@ const CICLO_TERMINALES_SEMANAL = [
   'AZOTEA 10-F — Zona trasera azotea · Grifo baldeo (agua blanda)',
 ];
 
+// Calendario real de los puntos distales (hoja "Semanal puntos terminales" del Excel).
+// Las muestras de octubre se hacen los JUEVES y desde noviembre vuelven a los MIÉRCOLES.
+// Cada entrada: [fecha, índice dentro de CICLO_TERMINALES_SEMANAL]. Después de la última
+// entrada explícita el ciclo sigue cada miércoles, un punto por semana.
+const CALENDARIO_TERMINALES_FIJO = [
+  ['2026-09-30', 4],  // BAJA 6.3-L
+  ['2026-10-01', 5],  // SOT 2-G1
+  ['2026-10-08', 6],  // BAJA 6.1-L2
+  ['2026-10-15', 7],  // AZOTEA 8-F
+  ['2026-10-22', 8],  // SOT 4-V
+  ['2026-10-29', 9],  // BAJA 6.2-L1
+  ['2026-11-04', 10], // AZOTEA 9-F
+  ['2026-11-11', 11], // AZOTEA 7-F
+  ['2026-11-18', 12], // SOT 2-G2
+];
+const CALENDARIO_TERMINALES = (function(){
+  const lista = CALENDARIO_TERMINALES_FIJO.map(([f, i]) => ({ fecha: f, idx: i }));
+  const [y, m, d] = CALENDARIO_TERMINALES_FIJO[CALENDARIO_TERMINALES_FIJO.length - 1][0].split('-').map(Number);
+  let idx = CALENDARIO_TERMINALES_FIJO[CALENDARIO_TERMINALES_FIJO.length - 1][1];
+  const f = new Date(y, m - 1, d);
+  for(let k = 0; k < 160; k++){ // ~3 años
+    f.setDate(f.getDate() + 7);
+    idx = (idx + 1) % CICLO_TERMINALES_SEMANAL.length;
+    lista.push({ fecha: f.getFullYear() + '-' + String(f.getMonth()+1).padStart(2,'0') + '-' + String(f.getDate()).padStart(2,'0'), idx });
+  }
+  return lista;
+})();
+const CALENDARIO_TERMINALES_FECHAS = CALENDARIO_TERMINALES.map(e => e.fecha);
+
+// Para rotaciones con calendario: devuelve la entrada de la fecha exacta (exact:true) o,
+// si ese día no hay muestra, la próxima entrada del calendario (exact:false).
+// Antes de la primera fecha del calendario devuelve null (se usa la fórmula semanal).
+function buscarEntradaCalendario(rotation, fechaReferencia){
+  const now = fechaReferencia || new Date();
+  const hoy = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const cal = rotation.calendar;
+  if(!cal || hoy < cal[0].fecha) return null;
+  for(const e of cal){
+    if(e.fecha >= hoy) return { entrada: e, exact: e.fecha === hoy };
+  }
+  return null;
+}
+
 // Calcula qué punto del ciclo corresponde a la fecha de hoy
 function calcularSugerenciaRotacion(rotation, fechaReferencia){
+  const hit = buscarEntradaCalendario(rotation, fechaReferencia);
+  if(hit) return rotation.cycle[hit.entrada.idx];
   const [ay, am, ad] = rotation.anchor.split('-').map(Number);
   const anchor = new Date(ay, am - 1, ad);
   const now = fechaReferencia || new Date();
@@ -1941,6 +1986,8 @@ function calcularSugerenciaRotacion(rotation, fechaReferencia){
 // Devuelve una "clave" única para el día/semana actual, para detectar si el
 // valor autocompletado quedó desactualizado (de una sesión anterior)
 function calcularClaveRotacion(rotation, fechaReferencia){
+  const hit = buscarEntradaCalendario(rotation, fechaReferencia);
+  if(hit) return 'c' + hit.entrada.fecha;
   const [ay, am, ad] = rotation.anchor.split('-').map(Number);
   const anchor = new Date(ay, am - 1, ad);
   const now = fechaReferencia || new Date();
@@ -2355,9 +2402,9 @@ const SALAS = [
   },
   {
     title: 'Semanal — Puntos terminales',
-    schedule: { period:'week', dayOfWeek:3 },
+    schedule: { period:'calendar', dates: CALENDARIO_TERMINALES_FECHAS },
     items: [
-      { id:'terminal_punto', type:'select', options: CICLO_TERMINALES_SEMANAL, rotation: { cycle: CICLO_TERMINALES_SEMANAL, anchor: '2026-02-09', period: 'week', dayOfWeek: 3 }, label:'Punto distal de muestra' },
+      { id:'terminal_punto', type:'select', options: CICLO_TERMINALES_SEMANAL, rotation: { cycle: CICLO_TERMINALES_SEMANAL, anchor: '2026-02-09', period: 'week', dayOfWeek: 3, calendar: CALENDARIO_TERMINALES }, label:'Punto distal de muestra' },
       { id:'terminal_clr', type:'value', inputType:'text', unit:'ppm · rango normal 0,2 – 1', label:'CLR (cloro libre residual)' },
       { id:'terminal_ph', type:'value', inputType:'text', unit:'rango normal 6,5 – 9', label:'pH' },
       { id:'terminal_temp_afc', type:'value', inputType:'text', unit:'°C · máx. 25', label:'Temperatura AFC (agua fría)' },
@@ -4247,6 +4294,16 @@ function calcularProximaFecha(schedule){
     return { isToday: diff === 0, date: target, daysUntil: diff };
   }
 
+  if(schedule.period === 'calendar'){
+    // Fechas explícitas (ISO, ordenadas). Toma la primera que sea hoy o posterior.
+    const hoyIso = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    const prox = schedule.dates.find(f => f >= hoyIso) || schedule.dates[schedule.dates.length - 1];
+    const [cy, cm, cd] = prox.split('-').map(Number);
+    const target = new Date(cy, cm - 1, cd);
+    const daysUntil = Math.max(0, Math.round((target - today) / msPerDay));
+    return { isToday: prox === hoyIso, date: target, daysUntil };
+  }
+
   if(schedule.period === 'interval'){
     // Se repite cada N días a partir de una fecha ancla (ej: quincenal = 14 días)
     const [ay, am, ad] = schedule.anchor.split('-').map(Number);
@@ -4308,7 +4365,8 @@ function buildSelectCard(item, state){
   if(item.rotation){
     suggestion = calcularSugerenciaRotacion(item.rotation, fechaReferenciaRotacion);
     currentKey = calcularClaveRotacion(item.rotation, fechaReferenciaRotacion);
-    dayOk = (item.rotation.dayOfWeek === undefined) || (fechaReferenciaRotacion.getDay() === item.rotation.dayOfWeek);
+    const hitCal = buscarEntradaCalendario(item.rotation, fechaReferenciaRotacion);
+    dayOk = hitCal ? hitCal.exact : ((item.rotation.dayOfWeek === undefined) || (fechaReferenciaRotacion.getDay() === item.rotation.dayOfWeek));
     const isStale = state.autoFilled && state.autoKey !== currentKey;
     if(dayOk && (!state.value || isStale)){
       state.value = suggestion;
@@ -4339,8 +4397,14 @@ function buildSelectCard(item, state){
     if(dayOk){
       chipHtml = `<span class="task-rotation-chip">🔄 ${etiquetaDia}: ${codeOnly}</span>`;
     } else {
-      const diaNombre = DIAS_SEMANA[item.rotation.dayOfWeek];
-      chipHtml = `<span class="task-rotation-chip muted">🔄 Corresponde los ${diaNombre} · Próximo: ${codeOnly}</span>`;
+      const hitChip = buscarEntradaCalendario(item.rotation, fechaReferenciaRotacion);
+      if(hitChip){
+        const [fy, fm, fd] = hitChip.entrada.fecha.split('-').map(Number);
+        chipHtml = `<span class="task-rotation-chip muted">🔄 Próximo: ${codeOnly} · ${formatFechaLarga(new Date(fy, fm - 1, fd))}</span>`;
+      } else {
+        const diaNombre = DIAS_SEMANA[item.rotation.dayOfWeek];
+        chipHtml = `<span class="task-rotation-chip muted">🔄 Corresponde los ${diaNombre} · Próximo: ${codeOnly}</span>`;
+      }
     }
   }
   const refreshBtnHtml = item.rotation ? `<button type="button" class="btn-refresh-rotation" title="Volver a chequear el punto correcto">🔄 Actualizar</button>` : '';
@@ -5230,6 +5294,15 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.15',
+    date: '2026-10-07',
+    changes: [
+      'Corregido: los puntos distales de muestra ahora siguen el calendario real del Excel (la app estaba 2 puntos atrasada).',
+      'Octubre se muestra en jueves (1, 8, 15, 22 y 29) y noviembre vuelve a miércoles (4, 11 y 18); después el ciclo sigue cada miércoles.',
+      'El aviso de "Corresponde HOY" y la próxima fecha del grupo usan ese calendario. "Semanal — Red y Depósitos" no se modificó.',
+    ]
+  },
   {
     version: 'v1.14',
     date: '2026-10-01',
