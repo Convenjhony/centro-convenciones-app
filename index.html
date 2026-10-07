@@ -1580,7 +1580,7 @@
 <div id="githubBackupModal" class="pin-modal-overlay" style="display:none;">
   <div class="pin-modal-box">
     <p class="pin-modal-user">☁️ Subir respaldo a GitHub</p>
-    <p class="pin-modal-title">Pegá un token de GitHub con permiso de escritura solo sobre este repositorio (lo podés revocar apenas termine). Nunca se guarda en la app.</p>
+    <p class="pin-modal-title">Pegá un token de GitHub con permiso de escritura solo sobre el repositorio privado centro-convenciones-respaldos (lo podés revocar apenas termine). Nunca se guarda en la app.</p>
     <input type="password" id="githubTokenInput" class="pin-input fecha-input" autocomplete="off" placeholder="github_pat_…" style="font-size:13px; letter-spacing:0;">
     <p class="pin-modal-error" id="githubBackupError" style="display:none;"></p>
     <p class="pin-modal-user" id="githubBackupProgress" style="display:none; font-size:12px; margin-top:8px;"></p>
@@ -3877,10 +3877,10 @@ document.getElementById('backupReminderSnoozeBtn').addEventListener('click', ()=
 // backups de la auditoría). A propósito NO es automático: pide un token
 // cada vez, no lo guarda en ningún lado, y solo administrador (Jhony) lo
 // ve. Sube un Excel por sala con datos a respaldos/<fecha>/<sala>.xlsx
-// en el mismo repositorio de la app.
+// en un repositorio PRIVADO aparte (centro-convenciones-respaldos).
 // =====================================================================
 const GITHUB_OWNER = 'Convenjhony';
-const GITHUB_REPO = 'centro-convenciones-app';
+const GITHUB_REPO = 'centro-convenciones-respaldos'; // repositorio PRIVADO (el de la app es público)
 
 function blobToBase64(blob){
   return new Promise((resolve, reject)=>{
@@ -5294,6 +5294,14 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.17',
+    date: '2026-10-07',
+    changes: [
+      'Seguridad: "Subir respaldo a GitHub" ahora sube a un repositorio PRIVADO aparte (centro-convenciones-respaldos), ya no al repositorio público de la app.',
+      'El token nuevo debe darse sobre ese repositorio (Contents: Read and write).',
+    ]
+  },
   {
     version: 'v1.16',
     date: '2026-10-07',
