@@ -2359,8 +2359,19 @@ const SALAS = [
       { id:'control_tablero_principal', type:'check', label:'Controlar tablero principal' },
     ]
   },
+]
+  },
   {
-    title: '5. Enfriadoras y azotea',
+    key: 'azotea_ala_a',
+    floor: 'terraza',
+    exportFileName: '37. Historial Azotea Ala A',
+    name: 'Azotea Ala A',
+    subtitle: 'Control mensual',
+    icon: '❄️',
+    fullTitle: 'Azotea Ala A — Control Mensual',
+    groups: [
+  {
+    title: '1. Enfriadoras y azotea',
     schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
     items: [
       { id:'control_enfriadora_1', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Enfriadora 1' },
@@ -2369,13 +2380,30 @@ const SALAS = [
     ]
   },
   {
-    title: '6. Climatizadoras de salas (equipos en azotea)',
+    title: '2. Climatizadora de sala (equipo en azotea)',
+    schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
+    items: [
+      { id:'climatizadora_tramontana', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Tramontana' },
+    ]
+  },
+]
+  },
+  {
+    key: 'azotea_ala_b',
+    floor: 'terraza',
+    exportFileName: '38. Historial Azotea Ala B',
+    name: 'Azotea Ala B',
+    subtitle: 'Control mensual',
+    icon: '🌀',
+    fullTitle: 'Azotea Ala B — Control Mensual',
+    groups: [
+  {
+    title: '1. Climatizadoras de salas (equipos en azotea)',
     schedule: { period:'month-weekday', dayOfWeek:6, occurrence:1 },
     items: [
       { id:'climatizadora_poniente', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Poniente' },
       { id:'climatizadora_siroco', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Siroco' },
       { id:'climatizadora_mistral', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Mistral' },
-      { id:'climatizadora_tramontana', type:'faultselect', options:['Apagado','Correcto/Encendido','Fallo'], detailOption:'Fallo', detailLabel:'Código o número de fallo', label:'Climatizadora — Sala Tramontana' },
     ]
   },
 ]
@@ -5321,9 +5349,57 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
   });
 });
 
+
+// Migración única (v1.22): "Sala de Calderas" se dividió en 3 salas. Los registros ya
+// guardados se reparten para no perder historial: cada tarea pasa a la sala que ahora
+// le corresponde, con la misma fecha y responsable.
+const MIGRACION_AZOTEA_KEY = 'migration-azotea-split-v1';
+const MIGRACION_AZOTEA_MAPA = {
+  azotea_ala_a: ['control_enfriadora_1', 'control_enfriadora_2', 'revision_azotea', 'climatizadora_tramontana'],
+  azotea_ala_b: ['climatizadora_poniente', 'climatizadora_siroco', 'climatizadora_mistral'],
+};
+function migrarCalderasAAzotea(){
+  try{
+    if(localStorage.getItem(MIGRACION_AZOTEA_KEY)) return;
+    const movidos = new Set([].concat(...Object.values(MIGRACION_AZOTEA_MAPA)));
+    // Historial
+    store.listKeys('combo-historial:calderas:').forEach(k=>{
+      const rec = store.get(k);
+      if(!rec || !Array.isArray(rec.items)) return;
+      const ts = k.split(':').pop();
+      Object.entries(MIGRACION_AZOTEA_MAPA).forEach(([salaKey, ids])=>{
+        const items = rec.items.filter(it => ids.includes(it.id));
+        if(!items.some(it => it.done)) return; // nada hecho de esta sala en ese registro
+        const destino = `combo-historial:${salaKey}:${ts}`;
+        if(store.get(destino)) return;
+        store.set(destino, { ...rec, items, completed: items.filter(it=>it.done).length, total: items.length });
+      });
+      const resto = rec.items.filter(it => !movidos.has(it.id));
+      rec.items = resto;
+      rec.completed = resto.filter(it=>it.done).length;
+      rec.total = resto.length;
+      store.set(k, rec);
+    });
+    // Borrador en curso
+    const dr = store.get('combo-draft:calderas');
+    if(dr && Array.isArray(dr.items)){
+      Object.entries(MIGRACION_AZOTEA_MAPA).forEach(([salaKey, ids])=>{
+        const items = dr.items.filter(it => ids.includes(it.id));
+        if(items.some(it => it.done) && !store.get(`combo-draft:${salaKey}`)){
+          store.set(`combo-draft:${salaKey}`, { ...dr, items });
+        }
+      });
+      dr.items = dr.items.filter(it => !movidos.has(it.id));
+      store.set('combo-draft:calderas', dr);
+    }
+    localStorage.setItem(MIGRACION_AZOTEA_KEY, String(Date.now()));
+  }catch(e){}
+}
+
 // =====================================================================
 // Inicio
 // =====================================================================
+migrarCalderasAAzotea();
 initSession();
 
 
@@ -5346,6 +5422,14 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.22',
+    date: '2026-10-08',
+    changes: [
+      'Azotea ahora tiene 3 zonas: "Azotea Ala A" (Enfriadoras 1 y 2, revisión general de azotea y climatizadora de Tramontana), "Azotea Ala B" (climatizadoras de Poniente, Siroco y Mistral) y "Sala de Calderas" (tareas 1 a 4).',
+      'Los registros anteriores de Calderas se repartieron automáticamente entre las 3 salas, sin perder historial.',
+    ]
+  },
   {
     version: 'v1.18',
     date: '2026-10-08',

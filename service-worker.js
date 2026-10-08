@@ -7,7 +7,7 @@
 // v1.xx para actualizaciones normales y recién pasamos a v2.0 cuando sea
 // un cambio grande de verdad.
 // =====================================================================
-const CACHE_VERSION = 'v1.21';
+const CACHE_VERSION = 'v1.22';
 const CACHE_NAME = `centro-convenciones-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
