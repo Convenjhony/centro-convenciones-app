@@ -1627,6 +1627,16 @@
       <span class="settings-menu-arrow">→</span>
     </button>
     <div class="settings-menu-item settings-menu-toggle-row">
+      <span class="settings-menu-icon">🌙</span>
+      <span class="settings-menu-text">
+        <span class="settings-menu-title">Modo oscuro (gris)</span>
+        <span class="settings-menu-desc">Cambiar entre el tema gris oscuro y el tema claro</span>
+      </span>
+      <button type="button" id="themeDarkToggle" class="toggle-switch" role="switch" aria-checked="false">
+        <span class="toggle-switch-knob"></span>
+      </button>
+    </div>
+    <div class="settings-menu-item settings-menu-toggle-row">
       <span class="settings-menu-icon">⚠️</span>
       <span class="settings-menu-text">
         <span class="settings-menu-title">Alertas de rango</span>
@@ -2886,8 +2896,24 @@ let currentUser = null;
 
 // Tema Oscuro/Gris exclusivo para Jhony — se enciende o apaga solo según
 // quién haya iniciado sesión.
+// Cada usuario tiene su propia preferencia (interruptor en Configuraciones).
+// Si todavía no eligió, Jhony arranca en oscuro (como siempre) y el resto en claro.
+function temaOscuroActivo(){
+  if(!currentUser) return false;
+  let v = null;
+  try{ v = localStorage.getItem('setting-theme-dark:' + currentUser.id); }catch(e){}
+  if(v === 'on') return true;
+  if(v === 'off') return false;
+  return currentUser.id === 'jhony';
+}
 function applyTheme(){
-  document.body.classList.toggle('theme-dark', !!(currentUser && currentUser.id === 'jhony'));
+  const oscuro = temaOscuroActivo();
+  document.body.classList.toggle('theme-dark', oscuro);
+  const tg = document.getElementById('themeDarkToggle');
+  if(tg){
+    tg.classList.toggle('on', oscuro);
+    tg.setAttribute('aria-checked', String(oscuro));
+  }
   actualizarVisibilidadAdminUI();
 }
 
@@ -4098,6 +4124,15 @@ document.getElementById('settingsBtn').addEventListener('click', toggleSettingsP
 document.getElementById('settingsBtnFloor').addEventListener('click', toggleSettingsPanel);
 document.getElementById('settingsCloseBtn').addEventListener('click', ()=>{
   document.getElementById('settingsPanel').style.display = 'none';
+});
+
+// Interruptor de modo oscuro/claro (preferencia por usuario)
+document.getElementById('themeDarkToggle').addEventListener('click', ()=>{
+  if(!currentUser) return;
+  const nuevo = !temaOscuroActivo();
+  try{ localStorage.setItem('setting-theme-dark:' + currentUser.id, nuevo ? 'on' : 'off'); }catch(e){}
+  applyTheme();
+  showToast(nuevo ? 'Modo oscuro activado.' : 'Modo claro activado.');
 });
 
 // Interruptor de alertas de rango
@@ -5422,6 +5457,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.23',
+    date: '2026-10-08',
+    changes: [
+      'Nuevo: interruptor "Modo oscuro (gris)" en Configuraciones para cambiar entre el tema gris oscuro y el claro. Cada usuario guarda su propia elección (Jhony sigue arrancando en oscuro).',
+    ]
+  },
   {
     version: 'v1.22',
     date: '2026-10-08',
