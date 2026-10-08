@@ -1812,7 +1812,6 @@
         <div class="history-toolbar-actions">
           <button class="btn btn-secondary" id="completarDiaAnteriorBtn">📅 Completar día anterior</button>
           <button class="btn btn-danger" id="deleteAllBtn">🗑 Eliminar todo</button>
-          <button class="btn btn-export" id="shareBtn">📤 Compartir (Drive)</button>
           <button class="btn btn-export" id="exportBtn">⬇ Descargar historial (Excel)</button>
         </div>
       </div>
@@ -4837,7 +4836,6 @@ saveBtn.addEventListener('click', async ()=>{
 // =====================================================================
 async function loadHistory(){
   historyList.innerHTML = '<div class="empty-state">Cargando historial…</div>';
-  shareFile = null;
   try{
     const keys = store.listKeys(HIST_PREFIX);
     if(keys.length === 0){
@@ -4849,7 +4847,6 @@ async function loadHistory(){
       const r = store.get(k);
       if(r) records.push(r);
     }
-    prepararCompartir(); // deja listo el Excel para el botón Compartir
     records.sort((a,b)=>b.date - a.date);
 
     historyList.innerHTML = '';
@@ -5127,59 +5124,6 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   exportGenericoMultiHoja();
 });
 
-// Compartir el Excel con el menú del dispositivo (Drive, correo, Quick Share…).
-// El navegador exige que navigator.share() se llame justo al tocar el botón, sin
-// esperas largas antes. Por eso el Excel se prepara en segundo plano al abrir el
-// Historial, y el botón solo abre el menú.
-let shareFile = null;          // { file, salaKey } ya generado
-let shareGenerando = null;     // promesa de la generación en curso
-function prepararCompartir(){
-  shareFile = null;
-  if(!currentSala || store.listKeys(HIST_PREFIX).length === 0) return Promise.resolve();
-  const salaKey = currentSala.key;
-  const usaPlantilla = (salaKey === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined');
-  const p = (async ()=>{
-    try{
-      const resultado = usaPlantilla ? await exportCalidadAguaConPlantilla(true) : exportGenericoMultiHoja(true);
-      if(!resultado || currentSala.key !== salaKey) return;
-      shareFile = { file: new File([resultado.blob], resultado.filename, { type: resultado.blob.type }), salaKey };
-    }catch(e){ shareFile = null; }
-  })();
-  shareGenerando = p;
-  p.finally(()=>{ if(shareGenerando === p) shareGenerando = null; });
-  return p;
-}
-function compartirExcel(){
-  if(!shareFile || shareFile.salaKey !== currentSala.key){
-    if(store.listKeys(HIST_PREFIX).length === 0){ showToast('Todavía no hay registros para compartir.'); return; }
-    if(!shareGenerando) prepararCompartir();
-    showToast('Preparando el Excel… esperá unos segundos y tocá "Compartir" otra vez.');
-    return;
-  }
-  const file = shareFile.file;
-  if(!(navigator.share && navigator.canShare && navigator.canShare({ files:[file] }))){
-    showToast('Este navegador no permite compartir archivos. Se descarga el Excel.');
-    if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') exportCalidadAguaConPlantilla();
-    else exportGenericoMultiHoja();
-    return;
-  }
-  const descargarComoRespaldo = (motivo)=>{
-    showToast(`No se pudo abrir el menú de compartir (${motivo}). Se descarga el Excel: búscalo en Descargas y envíalo a Drive desde ahí.`);
-    if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') exportCalidadAguaConPlantilla();
-    else exportGenericoMultiHoja();
-  };
-  navigator.share({ files:[file] }).catch(e=>{
-    if(e && e.name === 'AbortError') return; // cerró el menú
-    // Segundo intento: con un nombre de archivo simple (algunos dispositivos rechazan acentos/puntos)
-    const simple = new File([file], 'Historial_' + currentSala.key + '.xlsx', { type: file.type });
-    navigator.share({ files:[simple] }).catch(e2=>{
-      if(e2 && e2.name === 'AbortError') return;
-      descargarComoRespaldo((e2 && e2.name) || 'error');
-    });
-  });
-}
-document.getElementById('shareBtn').addEventListener('click', compartirExcel);
-
 function exportGenericoMultiHoja(returnBlob){
   const keys = store.listKeys(HIST_PREFIX);
   if(keys.length === 0){
@@ -5403,10 +5347,9 @@ initSession();
 // =====================================================================
 const CHANGELOG_DATA = [
   {
-    version: 'v1.20',
+    version: 'v1.18',
     date: '2026-10-08',
     changes: [
-      'Nuevo: botón "Compartir (Drive)" en el Historial. Prepara el Excel al abrir el Historial y abre el menú del dispositivo para enviarlo a Drive, correo, etc. Si el navegador no lo permite, lo descarga.',
       'Nuevo (administrador): al subir el respaldo a GitHub se puede indicar cuándo vence el token; la app avisa 7 días antes y cuando ya venció (guarda solo la fecha, nunca el token).',
       'Mejora: mensaje claro si el token es inválido o está vencido.',
     ]
