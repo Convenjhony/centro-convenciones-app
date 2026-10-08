@@ -1582,6 +1582,8 @@
     <p class="pin-modal-user">☁️ Subir respaldo a GitHub</p>
     <p class="pin-modal-title">Pegá un token de GitHub con permiso de escritura solo sobre el repositorio privado centro-convenciones-respaldos (lo podés revocar apenas termine). Nunca se guarda en la app.</p>
     <input type="password" id="githubTokenInput" class="pin-input fecha-input" autocomplete="off" placeholder="github_pat_…" style="font-size:13px; letter-spacing:0;">
+    <p class="pin-modal-title" style="margin-top:10px; font-size:12px;">¿Cuándo vence este token? (opcional — la app te avisa unos días antes)</p>
+    <input type="date" id="githubTokenExpiryInput" class="pin-input fecha-input" style="font-size:13px; letter-spacing:0;">
     <p class="pin-modal-error" id="githubBackupError" style="display:none;"></p>
     <p class="pin-modal-user" id="githubBackupProgress" style="display:none; font-size:12px; margin-top:8px;"></p>
     <div class="pin-modal-actions">
@@ -1810,6 +1812,7 @@
         <div class="history-toolbar-actions">
           <button class="btn btn-secondary" id="completarDiaAnteriorBtn">📅 Completar día anterior</button>
           <button class="btn btn-danger" id="deleteAllBtn">🗑 Eliminar todo</button>
+          <button class="btn btn-export" id="shareBtn">📤 Compartir (Drive)</button>
           <button class="btn btn-export" id="exportBtn">⬇ Descargar historial (Excel)</button>
         </div>
       </div>
@@ -3288,6 +3291,7 @@ function showFloorPickerScreen(){
   renderFloorGrid();
   purgarHistorialSiCorresponde();
   mostrarRecordatorioBackupSiCorresponde();
+  avisarVencimientoTokenSiCorresponde();
 }
 
 function renderFloorGrid(){
@@ -3900,6 +3904,8 @@ async function githubSubirArchivo(token, repoPath, blob, mensaje){
   if(getResp.status === 200){
     const info = await getResp.json();
     sha = info.sha;
+  } else if(getResp.status === 401){
+    throw new Error('Token inválido o vencido. Creá uno nuevo en GitHub.');
   } else if(getResp.status !== 404){
     throw new Error(`No se pudo consultar ${repoPath} (${getResp.status}).`);
   }
@@ -3914,6 +3920,51 @@ async function githubSubirArchivo(token, repoPath, blob, mensaje){
     if(putResp.status === 401) throw new Error('Token inválido o sin permiso de escritura.');
     throw new Error(`Falló la subida de ${repoPath} (${putResp.status}).`);
   }
+}
+
+// Vencimiento del token: se guarda SOLO la fecha (nunca el token) para poder avisar.
+const TOKEN_EXPIRY_KEY = 'github-token-expiry';
+const TOKEN_AVISO_DIAS = 7;
+function guardarVencimientoToken(valorFecha){
+  try{
+    if(valorFecha) localStorage.setItem(TOKEN_EXPIRY_KEY, valorFecha);
+  }catch(e){}
+  actualizarAvisoTokenUI();
+}
+function estadoVencimientoToken(){
+  let v = null;
+  try{ v = localStorage.getItem(TOKEN_EXPIRY_KEY); }catch(e){}
+  if(!v) return null;
+  const [y, m, d] = v.split('-').map(Number);
+  if(!y) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const dias = Math.round((new Date(y, m - 1, d) - hoy) / 86400000);
+  return { fecha: v, dias };
+}
+// Texto bajo el botón del menú + aviso (una vez al día) al abrir la app como administrador
+function actualizarAvisoTokenUI(){
+  const desc = document.querySelector('#githubBackupBtn .settings-menu-desc');
+  if(!desc) return;
+  const est = estadoVencimientoToken();
+  const base = 'Bajo demanda, con un token temporal (solo administrador)';
+  if(!est){ desc.textContent = base; return; }
+  if(est.dias < 0) desc.textContent = '⚠️ Token vencido — creá uno nuevo en GitHub';
+  else if(est.dias <= TOKEN_AVISO_DIAS) desc.textContent = `⚠️ El token vence en ${est.dias} día(s) — creá uno nuevo`;
+  else desc.textContent = base;
+}
+function avisarVencimientoTokenSiCorresponde(){
+  actualizarAvisoTokenUI();
+  if(!isAdmin()) return;
+  const est = estadoVencimientoToken();
+  if(!est || est.dias > TOKEN_AVISO_DIAS) return;
+  const hoyStr = new Date().toISOString().slice(0,10);
+  try{
+    if(localStorage.getItem('token-aviso-ultimo') === hoyStr) return;
+    localStorage.setItem('token-aviso-ultimo', hoyStr);
+  }catch(e){}
+  showToast(est.dias < 0
+    ? '⚠️ El token de GitHub está vencido. Los respaldos a GitHub van a fallar hasta crear uno nuevo.'
+    : `⚠️ El token de GitHub vence en ${est.dias} día(s). Creá uno nuevo para no perder los respaldos.`);
 }
 
 async function subirRespaldoAGithub(token){
@@ -3964,6 +4015,7 @@ async function subirRespaldoAGithub(token){
     }
 
     try{ localStorage.setItem(LAST_BACKUP_KEY, String(Date.now())); }catch(e){}
+    guardarVencimientoToken(document.getElementById('githubTokenExpiryInput').value);
     ocultarRecordatorioBackup();
     const borrados = purgarHistorialAntiguo();
 
@@ -3989,6 +4041,7 @@ document.getElementById('githubBackupBtn').addEventListener('click', ()=>{
   document.getElementById('settingsPanel').style.display = 'none';
   document.getElementById('githubBackupError').style.display = 'none';
   document.getElementById('githubTokenInput').value = '';
+  document.getElementById('githubTokenExpiryInput').value = '';
   document.getElementById('githubBackupModal').style.display = 'flex';
 });
 document.getElementById('githubBackupCancelBtn').addEventListener('click', ()=>{
@@ -5072,6 +5125,46 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   exportGenericoMultiHoja();
 });
 
+// Compartir el Excel con el menú del dispositivo (Drive, correo, Quick Share…).
+// Si el navegador no soporta compartir archivos, lo descarga como siempre.
+let pendingShare = null; // archivo ya generado, por si el navegador pide un segundo toque
+async function compartirExcel(){
+  const btn = document.getElementById('shareBtn');
+  try{
+    if(!pendingShare || pendingShare.salaKey !== currentSala.key){
+      btn.disabled = true;
+      showToast('Preparando Excel para compartir…');
+      const resultado = (currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined')
+        ? await exportCalidadAguaConPlantilla(true)
+        : exportGenericoMultiHoja(true);
+      if(!resultado) return; // sin registros (ya avisó con un mensaje)
+      const file = new File([resultado.blob], resultado.filename, { type: resultado.blob.type });
+      pendingShare = { file, salaKey: currentSala.key };
+    }
+    const file = pendingShare.file;
+    if(!(navigator.canShare && navigator.canShare({ files:[file] }))){
+      pendingShare = null;
+      showToast('Este navegador no permite compartir archivos. Se descarga el Excel.');
+      if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') await exportCalidadAguaConPlantilla();
+      else exportGenericoMultiHoja();
+      return;
+    }
+    await navigator.share({ files:[file], title: file.name });
+    pendingShare = null;
+  }catch(e){
+    if(e && e.name === 'AbortError'){ pendingShare = null; return; } // el usuario cerró el menú
+    if(e && e.name === 'NotAllowedError' && pendingShare){
+      showToast('Excel listo. Tocá "Compartir" otra vez para enviarlo.');
+      return;
+    }
+    pendingShare = null;
+    showToast('No se pudo compartir el archivo.');
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('shareBtn').addEventListener('click', compartirExcel);
+
 function exportGenericoMultiHoja(returnBlob){
   const keys = store.listKeys(HIST_PREFIX);
   if(keys.length === 0){
@@ -5294,6 +5387,15 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.18',
+    date: '2026-10-08',
+    changes: [
+      'Nuevo: botón "Compartir (Drive)" en el Historial. Abre el menú del dispositivo para enviar el Excel a Drive, correo, etc. Si el navegador no lo permite, lo descarga.',
+      'Nuevo (administrador): al subir el respaldo a GitHub se puede indicar cuándo vence el token; la app avisa 7 días antes y cuando ya venció (guarda solo la fecha, nunca el token).',
+      'Mejora: mensaje claro si el token es inválido o está vencido.',
+    ]
+  },
   {
     version: 'v1.17',
     date: '2026-10-07',
