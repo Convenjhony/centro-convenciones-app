@@ -4837,6 +4837,7 @@ saveBtn.addEventListener('click', async ()=>{
 // =====================================================================
 async function loadHistory(){
   historyList.innerHTML = '<div class="empty-state">Cargando historial…</div>';
+  shareFile = null;
   try{
     const keys = store.listKeys(HIST_PREFIX);
     if(keys.length === 0){
@@ -4848,6 +4849,7 @@ async function loadHistory(){
       const r = store.get(k);
       if(r) records.push(r);
     }
+    prepararCompartir(); // deja listo el Excel para el botón Compartir
     records.sort((a,b)=>b.date - a.date);
 
     historyList.innerHTML = '';
@@ -5126,42 +5128,45 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
 });
 
 // Compartir el Excel con el menú del dispositivo (Drive, correo, Quick Share…).
-// Si el navegador no soporta compartir archivos, lo descarga como siempre.
-let pendingShare = null; // archivo ya generado, por si el navegador pide un segundo toque
-async function compartirExcel(){
-  const btn = document.getElementById('shareBtn');
-  try{
-    if(!pendingShare || pendingShare.salaKey !== currentSala.key){
-      btn.disabled = true;
-      showToast('Preparando Excel para compartir…');
-      const resultado = (currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined')
-        ? await exportCalidadAguaConPlantilla(true)
-        : exportGenericoMultiHoja(true);
-      if(!resultado) return; // sin registros (ya avisó con un mensaje)
-      const file = new File([resultado.blob], resultado.filename, { type: resultado.blob.type });
-      pendingShare = { file, salaKey: currentSala.key };
-    }
-    const file = pendingShare.file;
-    if(!(navigator.canShare && navigator.canShare({ files:[file] }))){
-      pendingShare = null;
-      showToast('Este navegador no permite compartir archivos. Se descarga el Excel.');
-      if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') await exportCalidadAguaConPlantilla();
-      else exportGenericoMultiHoja();
-      return;
-    }
-    await navigator.share({ files:[file], title: file.name });
-    pendingShare = null;
-  }catch(e){
-    if(e && e.name === 'AbortError'){ pendingShare = null; return; } // el usuario cerró el menú
-    if(e && e.name === 'NotAllowedError' && pendingShare){
-      showToast('Excel listo. Tocá "Compartir" otra vez para enviarlo.');
-      return;
-    }
-    pendingShare = null;
-    showToast('No se pudo compartir el archivo.');
-  }finally{
-    btn.disabled = false;
+// El navegador exige que navigator.share() se llame justo al tocar el botón, sin
+// esperas largas antes. Por eso el Excel se prepara en segundo plano al abrir el
+// Historial, y el botón solo abre el menú.
+let shareFile = null;          // { file, salaKey } ya generado
+let shareGenerando = null;     // promesa de la generación en curso
+function prepararCompartir(){
+  shareFile = null;
+  if(!currentSala || store.listKeys(HIST_PREFIX).length === 0) return Promise.resolve();
+  const salaKey = currentSala.key;
+  const usaPlantilla = (salaKey === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined');
+  const p = (async ()=>{
+    try{
+      const resultado = usaPlantilla ? await exportCalidadAguaConPlantilla(true) : exportGenericoMultiHoja(true);
+      if(!resultado || currentSala.key !== salaKey) return;
+      shareFile = { file: new File([resultado.blob], resultado.filename, { type: resultado.blob.type }), salaKey };
+    }catch(e){ shareFile = null; }
+  })();
+  shareGenerando = p;
+  p.finally(()=>{ if(shareGenerando === p) shareGenerando = null; });
+  return p;
+}
+function compartirExcel(){
+  if(!shareFile || shareFile.salaKey !== currentSala.key){
+    if(store.listKeys(HIST_PREFIX).length === 0){ showToast('Todavía no hay registros para compartir.'); return; }
+    if(!shareGenerando) prepararCompartir();
+    showToast('Preparando el Excel… esperá unos segundos y tocá "Compartir" otra vez.');
+    return;
   }
+  const file = shareFile.file;
+  if(!(navigator.share && navigator.canShare && navigator.canShare({ files:[file] }))){
+    showToast('Este navegador no permite compartir archivos. Se descarga el Excel.');
+    if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') exportCalidadAguaConPlantilla();
+    else exportGenericoMultiHoja();
+    return;
+  }
+  navigator.share({ files:[file], title: file.name }).catch(e=>{
+    if(e && e.name === 'AbortError') return; // cerró el menú
+    showToast(`No se pudo compartir (${(e && e.name) || 'error'}). Probá con "Descargar historial".`);
+  });
 }
 document.getElementById('shareBtn').addEventListener('click', compartirExcel);
 
@@ -5388,10 +5393,10 @@ initSession();
 // =====================================================================
 const CHANGELOG_DATA = [
   {
-    version: 'v1.18',
+    version: 'v1.19',
     date: '2026-10-08',
     changes: [
-      'Nuevo: botón "Compartir (Drive)" en el Historial. Abre el menú del dispositivo para enviar el Excel a Drive, correo, etc. Si el navegador no lo permite, lo descarga.',
+      'Nuevo: botón "Compartir (Drive)" en el Historial. Prepara el Excel al abrir el Historial y abre el menú del dispositivo para enviarlo a Drive, correo, etc. Si el navegador no lo permite, lo descarga.',
       'Nuevo (administrador): al subir el respaldo a GitHub se puede indicar cuándo vence el token; la app avisa 7 días antes y cuando ya venció (guarda solo la fecha, nunca el token).',
       'Mejora: mensaje claro si el token es inválido o está vencido.',
     ]
