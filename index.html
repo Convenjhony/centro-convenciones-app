@@ -5163,9 +5163,19 @@ function compartirExcel(){
     else exportGenericoMultiHoja();
     return;
   }
-  navigator.share({ files:[file], title: file.name }).catch(e=>{
+  const descargarComoRespaldo = (motivo)=>{
+    showToast(`No se pudo abrir el menú de compartir (${motivo}). Se descarga el Excel: búscalo en Descargas y envíalo a Drive desde ahí.`);
+    if(currentSala.key === 'calidadagua' && typeof CALIDAD_AGUA_TEMPLATE_B64 !== 'undefined') exportCalidadAguaConPlantilla();
+    else exportGenericoMultiHoja();
+  };
+  navigator.share({ files:[file] }).catch(e=>{
     if(e && e.name === 'AbortError') return; // cerró el menú
-    showToast(`No se pudo compartir (${(e && e.name) || 'error'}). Probá con "Descargar historial".`);
+    // Segundo intento: con un nombre de archivo simple (algunos dispositivos rechazan acentos/puntos)
+    const simple = new File([file], 'Historial_' + currentSala.key + '.xlsx', { type: file.type });
+    navigator.share({ files:[simple] }).catch(e2=>{
+      if(e2 && e2.name === 'AbortError') return;
+      descargarComoRespaldo((e2 && e2.name) || 'error');
+    });
   });
 }
 document.getElementById('shareBtn').addEventListener('click', compartirExcel);
@@ -5393,7 +5403,7 @@ initSession();
 // =====================================================================
 const CHANGELOG_DATA = [
   {
-    version: 'v1.19',
+    version: 'v1.20',
     date: '2026-10-08',
     changes: [
       'Nuevo: botón "Compartir (Drive)" en el Historial. Prepara el Excel al abrir el Historial y abre el menú del dispositivo para enviarlo a Drive, correo, etc. Si el navegador no lo permite, lo descarga.',
