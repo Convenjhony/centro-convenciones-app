@@ -42,6 +42,52 @@
     --radius:14px;
   }
 
+  /* ===== Contadores (luz, gas, agua) ===== */
+  #contadoresScreen{ max-width:720px; margin:0 auto; padding:16px 16px 96px; }
+  .cont-header{ padding:8px 4px 4px; }
+  .cont-eyebrow{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-ink-soft); margin:0 0 4px; }
+  .cont-header h1{ margin:0; font-size:28px; color:var(--color-ink); }
+  .cont-sub{ margin:2px 0 12px; color:var(--color-ink-soft); }
+  .cont-status-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .cont-chip{ font-size:13px; padding:6px 12px; border-radius:999px; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-ink); }
+  .cont-chip.ok{ border-color:#2e9d5b; }
+  .cont-chip.warn{ border-color:#d98a00; }
+  .cont-chip.bad{ border-color:#c0392b; }
+  .cont-mini-btn{ font:inherit; font-size:13px; padding:6px 12px; border-radius:999px; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-ink); cursor:pointer; }
+  .cont-tabs{ display:flex; gap:8px; margin:14px 0; }
+  .cont-tab{ flex:1; font:inherit; font-weight:600; padding:10px; border-radius:12px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-ink); cursor:pointer; }
+  .cont-tab.active{ background:var(--color-ink-bar,#0B1220); color:#fff; border-color:transparent; }
+  .cont-card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .cont-card-title{ margin:0 0 8px; font-weight:700; color:var(--color-ink); }
+  .cont-label{ display:block; font-size:13px; color:var(--color-ink-soft); margin-bottom:4px; }
+  .cont-input{ width:100%; box-sizing:border-box; font:inherit; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg); color:var(--color-ink); }
+  .cont-input:focus{ outline:2px solid #3A6FD8; }
+  .cont-input[readonly]{ opacity:.7; }
+  .cont-row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cont-hint{ margin:6px 0 0; font-size:12px; color:var(--color-ink-soft); }
+  .cont-sec-title{ margin:18px 4px 6px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-ink-soft); }
+  .cont-grp{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+  .cont-grp > summary{ list-style:none; cursor:pointer; padding:12px 14px; font-weight:700; color:var(--color-ink); display:flex; justify-content:space-between; gap:8px; }
+  .cont-grp > summary::-webkit-details-marker{ display:none; }
+  .cont-grp-count{ font-weight:400; font-size:12px; color:var(--color-ink-soft); }
+  .cont-item{ padding:10px 14px; border-top:1px solid var(--color-border); }
+  .cont-item-top{ display:flex; justify-content:space-between; gap:8px; font-size:14px; color:var(--color-ink); margin-bottom:6px; }
+  .cont-unit{ color:var(--color-ink-soft); font-size:12px; white-space:nowrap; }
+  .cont-item .cont-hint.warn{ color:#d98a00; font-weight:600; }
+  .cont-item .cont-hint.bad{ color:#c0392b; font-weight:600; }
+  .cont-item .cont-input.warn{ border-color:#d98a00; }
+  .cont-item .cont-input.bad{ border-color:#c0392b; }
+  .cont-savebar{ position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--color-bg); border-top:1px solid var(--color-border); display:flex; justify-content:center; z-index:50; }
+  .cont-savebar .btn{ width:100%; max-width:688px; }
+  .cont-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .cont-table th{ text-align:left; font-weight:600; color:var(--color-ink-soft); padding:6px 8px; font-size:12px; }
+  .cont-table td{ padding:8px; border-top:1px solid var(--color-border); color:var(--color-ink); vertical-align:top; }
+  .cont-table td.num{ text-align:right; white-space:nowrap; }
+  .cont-empty{ text-align:center; color:var(--color-ink-soft); padding:24px 8px; }
+  #floorPicker [data-floor="contadores"] .floor-card-bg{
+    background:linear-gradient(135deg,#1E4396 0%,#0B1220 100%);
+  }
+
   /* ---- Tema Oscuro/Gris — exclusivo para el usuario Jhony ---- */
   /* Se activa agregando la clase "theme-dark" al <body> (ver JS, se
      enciende sola al iniciar sesión como Jhony). Las barras y botones
@@ -1589,6 +1635,60 @@
     <div class="pin-modal-actions">
       <button type="button" id="githubBackupCancelBtn" class="btn btn-secondary">Cancelar</button>
       <button type="button" id="githubBackupConfirmBtn" class="btn btn-save">Subir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONTADORES (luz, gas, agua) ===================== -->
+<div id="contadoresScreen" style="display:none;">
+  <div class="cont-header">
+    <p class="cont-eyebrow">Consumos</p>
+    <h1>Contadores</h1>
+    <p class="cont-sub">Luz · Gas · Agua</p>
+    <div class="cont-status-row">
+      <span id="contSyncChip" class="cont-chip"></span>
+      <button type="button" id="contSyncBtn" class="cont-mini-btn">🔄 Sincronizar</button>
+      <button type="button" id="contLinkBtn" class="cont-mini-btn" style="display:none;">🔗 Vincular</button>
+    </div>
+  </div>
+  <div class="cont-tabs">
+    <button type="button" class="cont-tab active" data-ctab="lecturas">Lecturas</button>
+    <button type="button" class="cont-tab" data-ctab="consumos">Consumos</button>
+  </div>
+  <div id="contPanelLecturas">
+    <div class="cont-card">
+      <label class="cont-label" for="contFecha">Fecha de la lectura</label>
+      <input type="date" id="contFecha" class="cont-input">
+      <p class="cont-hint" id="contFechaHint"></p>
+    </div>
+    <div class="cont-card">
+      <p class="cont-card-title">Clientes del día</p>
+      <div class="cont-row-2">
+        <div><label class="cont-label" for="contClientesH4">Hotel 4*</label><input type="text" inputmode="numeric" id="contClientesH4" class="cont-input" placeholder="0"></div>
+        <div><label class="cont-label" for="contClientesH5">Hotel 5*</label><input type="text" inputmode="numeric" id="contClientesH5" class="cont-input" placeholder="0"></div>
+      </div>
+    </div>
+    <div id="contLecturasLista"></div>
+    <div class="cont-savebar">
+      <button type="button" id="contGuardarBtn" class="btn btn-save">💾 Guardar lecturas</button>
+    </div>
+  </div>
+  <div id="contPanelConsumos" style="display:none;"></div>
+</div>
+
+<!-- ===================== MODAL: VINCULAR CONTADORES ===================== -->
+<div id="contLinkModal" class="pin-modal-overlay" style="display:none;">
+  <div class="pin-modal-box">
+    <p class="pin-modal-user">🔗 Vincular contadores</p>
+    <p class="pin-modal-title">Dirección del servicio y clave de esta tablet. Se guardan solo en este dispositivo.</p>
+    <input type="text" id="contLinkUrl" class="pin-input fecha-input" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:12px; letter-spacing:0;">
+    <input type="password" id="contLinkClave" class="pin-input fecha-input" autocomplete="off" placeholder="Clave" style="font-size:13px; letter-spacing:0; margin-top:8px;">
+    <input type="text" id="contLinkCodigo" class="pin-input fecha-input" autocomplete="off" placeholder="…o pegá un código de vinculación" style="font-size:12px; letter-spacing:0; margin-top:8px;">
+    <p class="pin-modal-error" id="contLinkError" style="display:none;"></p>
+    <div class="pin-modal-actions">
+      <button type="button" id="contLinkCopiarBtn" class="btn btn-secondary">Copiar código</button>
+      <button type="button" id="contLinkCancelBtn" class="btn btn-secondary">Cancelar</button>
+      <button type="button" id="contLinkSaveBtn" class="btn btn-save">Guardar</button>
     </div>
   </div>
 </div>
@@ -3330,6 +3430,7 @@ document.getElementById('changePinBtn').addEventListener('click', ()=>{
 });
 
 function showFloorPickerScreen(){
+  contScreen.style.display = 'none';
   userPicker.style.display = 'none';
   salaPicker.style.display = 'none';
   floorPicker.style.display = 'block';
@@ -3395,6 +3496,21 @@ function renderFloorGrid(){
     }
     floorGrid.appendChild(card);
   });
+
+  // Tarjeta de Contadores (luz, gas y agua), aparte de las plantas
+  const contCard = document.createElement('div');
+  contCard.className = 'floor-card';
+  contCard.setAttribute('data-floor', 'contadores');
+  contCard.innerHTML = `
+    <div class="floor-card-bg"></div>
+    <div class="floor-card-gloss"></div>
+    <div class="floor-card-content">
+      <p class="floor-card-eyebrow">Consumos</p>
+      <p class="floor-card-name">Contadores</p>
+      <p class="floor-card-desc">Luz · Gas · Agua</p>
+    </div>`;
+  contCard.addEventListener('click', showContadoresScreen);
+  floorGrid.appendChild(contCard);
 }
 
 function selectFloor(key){
@@ -3408,6 +3524,7 @@ document.getElementById('backToFloorsBtn').addEventListener('click', ()=>{
 });
 
 function showSalaPickerScreen(){
+  contScreen.style.display = 'none';
   userPicker.style.display = 'none';
   floorPicker.style.display = 'none';
   salaPicker.style.display = 'block';
@@ -3443,6 +3560,7 @@ function cerrarSesion(){
   try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
   salaPicker.style.display = 'none';
   floorPicker.style.display = 'none';
+  contScreen.style.display = 'none';
   switchUserBtn.style.display = 'none';
   backToFloorsBtn.style.display = 'none';
   userPicker.style.display = 'block';
@@ -5385,6 +5503,486 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 });
 
 
+// =====================================================================
+// Contadores de luz, gas y agua (módulo nuevo, independiente de las salas)
+// =====================================================================
+const CONT_CATALOGO = [
+  { id:"1.18.1", sec:"Electricidad", grp:"Activa", nombre:"1.18.1", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.2", sec:"Electricidad", grp:"Activa", nombre:"1.18.2", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.3", sec:"Electricidad", grp:"Activa", nombre:"1.18.3", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.4", sec:"Electricidad", grp:"Activa", nombre:"1.18.4", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.5", sec:"Electricidad", grp:"Activa", nombre:"1.18.5", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.6", sec:"Electricidad", grp:"Activa", nombre:"1.18.6", unidad:"kWh", derivado:false, acum:true },
+  { id:"1.18.0", sec:"Electricidad", grp:"Activa", nombre:"1.18.0 (total)", unidad:"kWh", derivado:true, acum:true },
+  { id:"1.58.1", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.1", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.2", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.2", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.3", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.3", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.4", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.4", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.5", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.5", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.6", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.6", unidad:"kvarh", derivado:false, acum:true },
+  { id:"1.58.0", sec:"Electricidad", grp:"Reactiva", nombre:"1.58.0 (total)", unidad:"kvarh", derivado:true, acum:true },
+  { id:"1.16.1", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.1", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.2", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.2", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.3", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.3", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.4", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.4", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.5", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.5", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.6", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.6", unidad:"kW", derivado:false, acum:false },
+  { id:"1.16.0", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.0 (máximo)", unidad:"kW", derivado:true, acum:false },
+  { id:"el_cc", sec:"Electricidad", grp:"Centro de Convenciones", nombre:"C. Convenciones", unidad:"MWh", derivado:false, acum:true },
+  { id:"placas_h4", sec:"Electricidad", grp:"Rendimiento de placas", nombre:"Hotel 4*", unidad:"MWh", derivado:false, acum:true },
+  { id:"placas_h5", sec:"Electricidad", grp:"Rendimiento de placas", nombre:"Hotel 5*", unidad:"MWh", derivado:false, acum:true },
+  { id:"masajes_h4", sec:"Electricidad", grp:"Centro de masajes", nombre:"Contador Hotel 4*", unidad:"kWh", derivado:false, acum:true },
+  { id:"masajes_h5", sec:"Electricidad", grp:"Centro de masajes", nombre:"Contador Hotel 5*", unidad:"kWh", derivado:false, acum:true },
+  { id:"gas_cocina4", sec:"Gas", grp:"Gas", nombre:"Cocina 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"gas_cocina5", sec:"Gas", grp:"Gas", nombre:"Cocina 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"gas_calderas", sec:"Gas", grp:"Gas", nombre:"Calderas", unidad:"m3", derivado:false, acum:true },
+  { id:"ag_general", sec:"Agua", grp:"Agua", nombre:"Contador general", unidad:"m3", derivado:false, acum:true },
+  { id:"ag_c1", sec:"Agua", grp:"Agua", nombre:"Contador 1", unidad:"m3", derivado:false, acum:true },
+  { id:"ag_c2", sec:"Agua", grp:"Agua", nombre:"Contador 2", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_riego_cc", sec:"Agua", grp:"Agua dura", nombre:"Riego jardín CC", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_riego_h4", sec:"Agua", grp:"Agua dura", nombre:"Riego jardín 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_riego_h5", sec:"Agua", grp:"Agua dura", nombre:"Riego jardín 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_baldeo_h4", sec:"Agua", grp:"Agua dura", nombre:"Baldeo 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_baldeo_h5", sec:"Agua", grp:"Agua dura", nombre:"Baldeo 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_descal", sec:"Agua", grp:"Agua dura", nombre:"Descalcificador", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_piscina_h4", sec:"Agua", grp:"Agua dura", nombre:"Piscina 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"ad_piscina_h5", sec:"Agua", grp:"Agua dura", nombre:"Piscina 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_boilers_g1", sec:"Agua", grp:"Agua blanda", nombre:"Boilers G1", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_boilers_g2", sec:"Agua", grp:"Agua blanda", nombre:"Boilers G2", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_h4", sec:"Agua", grp:"Agua blanda", nombre:"Hotel 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_h5", sec:"Agua", grp:"Agua blanda", nombre:"Hotel 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_cc", sec:"Agua", grp:"Agua blanda", nombre:"C. Convenciones", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_llenado", sec:"Agua", grp:"Agua blanda", nombre:"Llenado calderas", unidad:"m3", derivado:false, acum:true },
+  { id:"ab_sprinklers", sec:"Agua", grp:"Agua blanda", nombre:"Sprinklers", unidad:"m3", derivado:false, acum:true },
+  { id:"wc_h4", sec:"Agua", grp:"Agua WC", nombre:"Hotel 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"wc_h5", sec:"Agua", grp:"Agua WC", nombre:"Hotel 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"wc_cc", sec:"Agua", grp:"Agua WC", nombre:"C. Convenciones", unidad:"m3", derivado:false, acum:true },
+  { id:"ar_h4", sec:"Agua", grp:"Agua riego", nombre:"Riego Hotel 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"ar_h5", sec:"Agua", grp:"Agua riego", nombre:"Riego Hotel 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"ar_cc", sec:"Agua", grp:"Agua riego", nombre:"Riego CC", unidad:"m3", derivado:false, acum:true },
+  { id:"os_h4", sec:"Agua", grp:"Ósmosis", nombre:"Hotel 4*", unidad:"m3", derivado:false, acum:true },
+  { id:"os_h5", sec:"Agua", grp:"Ósmosis", nombre:"Hotel 5*", unidad:"m3", derivado:false, acum:true },
+  { id:"os_cc", sec:"Agua", grp:"Ósmosis", nombre:"C. Convenciones", unidad:"m3", derivado:false, acum:true }
+];
+
+// Los 3 totales eléctricos los calcula la app: 1.18.0 y 1.58.0 = suma de los 6 contadores,
+// 1.16.0 = el mayor de los 6 maxímetros (así lo hace el Excel actual).
+const CONT_DERIVADOS = {
+  '1.18.0': { tipo:'suma', de:['1.18.1','1.18.2','1.18.3','1.18.4','1.18.5','1.18.6'] },
+  '1.58.0': { tipo:'suma', de:['1.58.1','1.58.2','1.58.3','1.58.4','1.58.5','1.58.6'] },
+  '1.16.0': { tipo:'max',  de:['1.16.1','1.16.2','1.16.3','1.16.4','1.16.5','1.16.6'] },
+};
+const CONT_CFG_KEY = 'cont-config';        // { url, clave } — solo en esta tablet
+const CONT_COLA_KEY = 'cont-cola';         // lotes pendientes de enviar
+const CONT_DATOS_KEY = 'cont-datos';       // { idContador: [[fecha, valor], ...] }
+const CONT_SYNC_TS_KEY = 'cont-ultima-sync';
+
+function contLeer(key, def){
+  try{ const r = localStorage.getItem(key); return r ? JSON.parse(r) : def; }catch(e){ return def; }
+}
+function contGuardar(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ return false; }
+}
+function contPad(n){ return String(n).padStart(2, '0'); }
+function contIsoDeFecha(d){ return d.getFullYear() + '-' + contPad(d.getMonth() + 1) + '-' + contPad(d.getDate()); }
+function contHoyIso(){ return contIsoDeFecha(new Date()); }
+function contFmt(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return Number(n).toLocaleString('es-ES', { maximumFractionDigits: 4 });
+}
+function contFmtFecha(iso){ const p = iso.split('-'); return p[2] + '/' + p[1]; }
+function contDias(a, b){ // días entre dos fechas ISO (b - a)
+  const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+  return Math.round((new Date(pb[0], pb[1]-1, pb[2]) - new Date(pa[0], pa[1]-1, pa[2])) / 86400000);
+}
+function contParseNum(s){
+  if(s === null || s === undefined) return NaN;
+  const t = String(s).trim().replace(/\s/g, '').replace(',', '.');
+  if(!t || !/^\d+(\.\d+)?$/.test(t)) return NaN;
+  return Number(t);
+}
+function contNuevoLote(){
+  try{ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+
+// ---- Datos locales (últimas lecturas de cada contador) ----
+function contDatos(){ return contLeer(CONT_DATOS_KEY, {}); }
+function contAnadirDato(datos, id, fecha, valor){
+  const arr = datos[id] || (datos[id] = []);
+  const i = arr.findIndex(x => x[0] === fecha);
+  if(i >= 0) arr[i][1] = valor; else { arr.push([fecha, valor]); arr.sort((a, b) => a[0] < b[0] ? -1 : 1); }
+  if(arr.length > 500) arr.splice(0, arr.length - 500);
+}
+function contAnterior(datos, id, fechaIso){ // última lectura estrictamente anterior a la fecha
+  const arr = datos[id] || [];
+  for(let i = arr.length - 1; i >= 0; i--) if(arr[i][0] < fechaIso) return arr[i];
+  return null;
+}
+function contReconstruirDatos(resp){
+  const datos = {};
+  (resp.lecturas || []).forEach(l => {
+    const v = Number(l.valor);
+    if(l.id && isFinite(v) && /^\d{4}-\d{2}-\d{2}$/.test(l.fecha)) contAnadirDato(datos, String(l.id), l.fecha, v);
+  });
+  // Lo que todavía no llegó al servidor también cuenta
+  contLeer(CONT_COLA_KEY, []).forEach(b => (b.lecturas || []).forEach(l => contAnadirDato(datos, l.id, b.fecha, l.valor)));
+  contGuardar(CONT_DATOS_KEY, datos);
+}
+
+// ---- Vinculación ----
+function contConfig(){ const c = contLeer(CONT_CFG_KEY, null); return (c && c.url && c.clave) ? c : null; }
+function contCodigoDeConfig(c){
+  try{ return btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.url, k: c.clave })))); }catch(e){ return ''; }
+}
+function contConfigDeCodigo(codigo){
+  try{
+    const o = JSON.parse(decodeURIComponent(escape(atob(codigo.trim()))));
+    return (o && o.u && o.k) ? { url: o.u, clave: o.k } : null;
+  }catch(e){ return null; }
+}
+
+// ---- Envío ----
+let contSincronizando = false;
+let contUltimoError = '';
+async function contPost(cfg, payload){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 25000);
+  try{
+    const r = await fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({}, payload, { clave: cfg.clave })),
+      signal: ctrl.signal,
+    });
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+async function contSincronizar(manual){
+  const cfg = contConfig();
+  if(!cfg){
+    contActualizarChip();
+    if(manual) showToast('Esta tablet todavía no está vinculada a los contadores.');
+    return;
+  }
+  if(contSincronizando) return;
+  contSincronizando = true;
+  contUltimoError = '';
+  contActualizarChip();
+  try{
+    let cola = contLeer(CONT_COLA_KEY, []);
+    while(cola.length){
+      const lote = cola[0];
+      const j = await contPost(cfg, Object.assign({ accion: 'guardar' }, lote));
+      if(!j || !j.ok){
+        throw new Error(j && j.error === 'clave' ? 'Clave incorrecta' : 'El servicio rechazó el envío');
+      }
+      cola.shift();
+      contGuardar(CONT_COLA_KEY, cola);
+    }
+    const desde = contIsoDeFecha(new Date(Date.now() - 120 * 86400000));
+    const j = await contPost(cfg, { accion: 'leer', desde });
+    if(!j || !j.ok) throw new Error(j && j.error === 'clave' ? 'Clave incorrecta' : 'No se pudieron leer los datos');
+    contReconstruirDatos(j);
+    try{ localStorage.setItem(CONT_SYNC_TS_KEY, String(Date.now())); }catch(e){}
+    if(manual) showToast('Contadores sincronizados.');
+  }catch(e){
+    contUltimoError = (e && e.name === 'AbortError') ? 'Sin respuesta' : ((e && e.message === 'Failed to fetch') ? 'Sin conexión' : (e && e.message) || 'Error');
+    if(manual) showToast('No se pudo sincronizar: ' + contUltimoError);
+  }finally{
+    contSincronizando = false;
+    contActualizarChip();
+    if(contPantallaVisible()) contRefrescarVista();
+  }
+}
+window.addEventListener('online', () => { if(contConfig() && contLeer(CONT_COLA_KEY, []).length) contSincronizar(false); });
+
+function contActualizarChip(){
+  const chip = document.getElementById('contSyncChip');
+  if(!chip) return;
+  const cfg = contConfig();
+  const pend = contLeer(CONT_COLA_KEY, []).length;
+  chip.className = 'cont-chip';
+  if(!cfg){
+    chip.textContent = '⚠️ Sin vincular';
+    chip.classList.add('warn');
+  }else if(contSincronizando){
+    chip.textContent = '🔄 Sincronizando…';
+  }else if(contUltimoError){
+    chip.textContent = '⚠️ ' + contUltimoError + (pend ? ' · ' + pend + ' pendiente(s)' : '');
+    chip.classList.add('bad');
+  }else if(pend){
+    chip.textContent = '⏳ ' + pend + ' envío(s) pendiente(s)';
+    chip.classList.add('warn');
+  }else{
+    const ts = Number(localStorage.getItem(CONT_SYNC_TS_KEY) || 0);
+    chip.textContent = ts ? '✓ Sincronizado ' + new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '✓ Listo';
+    chip.classList.add('ok');
+  }
+  const linkBtn = document.getElementById('contLinkBtn');
+  if(linkBtn) linkBtn.style.display = isAdmin() ? 'inline-block' : 'none';
+}
+
+// ---- Pantalla ----
+const contScreen = document.getElementById('contadoresScreen');
+let contForm = {};            // texto escrito en cada casilla: { idContador: '123' }
+let contTab = 'lecturas';
+function contPantallaVisible(){ return contScreen.style.display !== 'none'; }
+
+function showContadoresScreen(){
+  userPicker.style.display = 'none';
+  floorPicker.style.display = 'none';
+  salaPicker.style.display = 'none';
+  contScreen.style.display = 'block';
+  switchUserBtn.style.display = 'flex';
+  backToFloorsBtn.style.display = 'flex';
+  window.scrollTo(0, 0);
+  applyTheme();
+  const f = document.getElementById('contFecha');
+  const hoy = contHoyIso();
+  f.max = hoy;
+  if(!f.value) f.value = hoy;
+  contActualizarChip();
+  contRenderLecturas();
+  contRenderConsumos();
+  contActivarTab(contTab);
+  if(contConfig()) contSincronizar(false);
+}
+
+function contActivarTab(tab){
+  contTab = tab;
+  document.querySelectorAll('.cont-tab').forEach(b => b.classList.toggle('active', b.dataset.ctab === tab));
+  document.getElementById('contPanelLecturas').style.display = tab === 'lecturas' ? 'block' : 'none';
+  document.getElementById('contPanelConsumos').style.display = tab === 'consumos' ? 'block' : 'none';
+  document.getElementById('contGuardarBtn').parentElement.style.display = tab === 'lecturas' ? 'flex' : 'none';
+}
+
+function contRefrescarVista(){
+  contActualizarHints();
+  contRenderConsumos();
+}
+
+function contSecciones(){
+  const orden = [];
+  CONT_CATALOGO.forEach(c => {
+    let s = orden.find(x => x.nombre === c.sec);
+    if(!s){ s = { nombre: c.sec, grupos: [] }; orden.push(s); }
+    let g = s.grupos.find(x => x.nombre === c.grp);
+    if(!g){ g = { nombre: c.grp, items: [] }; s.grupos.push(g); }
+    g.items.push(c);
+  });
+  return orden;
+}
+
+function contRenderLecturas(){
+  const cont = document.getElementById('contLecturasLista');
+  let html = '';
+  contSecciones().forEach(sec => {
+    html += `<p class="cont-sec-title">${escapeHtml(sec.nombre)}</p>`;
+    sec.grupos.forEach(g => {
+      const abierto = sec.nombre === 'Electricidad' ? '' : '';
+      html += `<details class="cont-grp" open${abierto}><summary><span>${escapeHtml(g.nombre)}</span><span class="cont-grp-count">${g.items.filter(i => !i.derivado).length} contador(es) · ${escapeHtml(g.items[0].unidad)}</span></summary>`;
+      g.items.forEach(c => {
+        const val = contForm[c.id] !== undefined ? contForm[c.id] : '';
+        html += `<div class="cont-item" data-cid="${escapeHtml(c.id)}">
+          <div class="cont-item-top"><span>${escapeHtml(c.nombre)}</span><span class="cont-unit">${escapeHtml(c.unidad)}</span></div>
+          <input type="text" inputmode="decimal" class="cont-input" data-cid="${escapeHtml(c.id)}" value="${escapeHtml(val)}" ${c.derivado ? 'readonly placeholder="se calcula solo"' : 'placeholder="Lectura"'} autocomplete="off">
+          <p class="cont-hint"></p></div>`;
+      });
+      html += '</details>';
+    });
+  });
+  cont.innerHTML = html;
+  cont.querySelectorAll('input.cont-input:not([readonly])').forEach(inp => {
+    inp.addEventListener('input', () => { contForm[inp.dataset.cid] = inp.value; contActualizarHints(); });
+  });
+  contActualizarHints();
+}
+
+function contFechaElegida(){ return document.getElementById('contFecha').value || contHoyIso(); }
+
+function contValorDerivado(id){
+  const d = CONT_DERIVADOS[id];
+  if(!d) return null;
+  const vals = d.de.map(x => contParseNum(contForm[x]));
+  if(vals.some(v => isNaN(v))) return null;
+  return d.tipo === 'suma' ? vals.reduce((a, b) => a + b, 0) : Math.max.apply(null, vals);
+}
+
+function contEvaluar(c, datos, fecha){
+  // Devuelve { estado:'vacio'|'ok'|'warn'|'bad', texto, valor }
+  const ant = contAnterior(datos, c.id, fecha);
+  const textoAnt = ant ? `Anterior: ${contFmt(ant[1])} (${contFmtFecha(ant[0])})` : 'Sin lectura anterior';
+  if(c.derivado){
+    const v = contValorDerivado(c.id);
+    return { estado: v === null ? 'vacio' : 'ok', texto: v === null ? 'Se calcula cuando estén los 6 contadores · ' + textoAnt : textoAnt, valor: v };
+  }
+  const raw = contForm[c.id];
+  if(raw === undefined || String(raw).trim() === '') return { estado: 'vacio', texto: textoAnt, valor: null };
+  const v = contParseNum(raw);
+  if(isNaN(v)) return { estado: 'bad', texto: 'Escribí solo números (con coma para decimales)', valor: null };
+  if(c.acum && ant && v < ant[1]) return { estado: 'warn', texto: `⚠️ Menor que la anterior (${contFmt(ant[1])}). ¿Se reinició o cambió el contador?`, valor: v };
+  if(ant){
+    const dif = v - ant[1];
+    const dias = Math.max(1, contDias(ant[0], fecha));
+    return { estado: 'ok', texto: `${textoAnt} · +${contFmt(dif)} en ${dias} día(s)`, valor: v };
+  }
+  return { estado: 'ok', texto: textoAnt, valor: v };
+}
+
+function contActualizarHints(){
+  const fecha = contFechaElegida();
+  const datos = contDatos();
+  const hoy = contHoyIso();
+  document.getElementById('contFechaHint').textContent =
+    fecha === hoy ? 'Lectura de hoy.' : 'Estás cargando una lectura de otro día (' + contFmtFecha(fecha) + ').';
+  document.querySelectorAll('#contLecturasLista .cont-item').forEach(row => {
+    const c = CONT_CATALOGO.find(x => x.id === row.dataset.cid);
+    const ev = contEvaluar(c, datos, fecha);
+    const inp = row.querySelector('input');
+    const hint = row.querySelector('.cont-hint');
+    hint.textContent = ev.texto;
+    hint.className = 'cont-hint' + (ev.estado === 'warn' || ev.estado === 'bad' ? ' ' + ev.estado : '');
+    inp.classList.toggle('warn', ev.estado === 'warn');
+    inp.classList.toggle('bad', ev.estado === 'bad');
+    if(c.derivado) inp.value = ev.valor === null ? '' : contFmt(ev.valor).replace(/\./g, '').replace(',', '.');
+  });
+}
+
+function contGuardarLecturas(){
+  if(!contConfig()){
+    showToast('Primero hay que vincular esta tablet (botón Vincular, perfil de Jhony).');
+    return;
+  }
+  const fecha = contFechaElegida();
+  if(fecha > contHoyIso()){ showToast('La fecha no puede ser futura.'); return; }
+  const datos = contDatos();
+  const lecturas = [];
+  const avisos = [];
+  for(const c of CONT_CATALOGO){
+    const ev = contEvaluar(c, datos, fecha);
+    if(ev.estado === 'bad'){ showToast('Revisá "' + c.nombre + '": escribí solo números.'); return; }
+    if(ev.estado === 'vacio' || ev.valor === null) continue;
+    if(ev.estado === 'warn') avisos.push('• ' + c.nombre + ' (' + c.grp + '): ' + contFmt(ev.valor) + ' < ' + contFmt(contAnterior(datos, c.id, fecha)[1]));
+    lecturas.push({ id: c.id, valor: ev.valor, obs: '' });
+  }
+  const h4Txt = document.getElementById('contClientesH4').value.trim();
+  const h5Txt = document.getElementById('contClientesH5').value.trim();
+  let clientes = null;
+  if(h4Txt || h5Txt){
+    const h4 = contParseNum(h4Txt), h5 = contParseNum(h5Txt);
+    if(isNaN(h4) || isNaN(h5)){ showToast('Clientes: completá los dos hoteles con números.'); return; }
+    clientes = { h4, h5 };
+  }
+  if(!lecturas.length && !clientes){ showToast('No hay nada para guardar todavía.'); return; }
+  if(avisos.length && !confirm('Estas lecturas son MENORES que la anterior:\n\n' + avisos.join('\n') + '\n\n¿Guardar igual?')) return;
+
+  const lote = { lote: contNuevoLote(), fecha, usuario: currentUser ? currentUser.name : '', lecturas };
+  if(clientes) lote.clientes = clientes;
+  const cola = contLeer(CONT_COLA_KEY, []);
+  cola.push(lote);
+  if(!contGuardar(CONT_COLA_KEY, cola)){ showToast('No se pudo guardar en la tablet (¿sin espacio?).'); return; }
+  lecturas.forEach(l => contAnadirDato(datos, l.id, fecha, l.valor));
+  contGuardar(CONT_DATOS_KEY, datos);
+
+  contForm = {};
+  document.getElementById('contClientesH4').value = '';
+  document.getElementById('contClientesH5').value = '';
+  contRenderLecturas();
+  contRenderConsumos();
+  contActualizarChip();
+  showToast('Guardado: ' + lecturas.length + ' lectura(s).' + (navigator.onLine ? '' : ' Se enviará cuando haya conexión.'));
+  contSincronizar(false);
+}
+
+function contRenderConsumos(){
+  const panel = document.getElementById('contPanelConsumos');
+  const datos = contDatos();
+  if(!Object.keys(datos).length){
+    panel.innerHTML = '<p class="cont-empty">Todavía no hay lecturas. Cuando se carguen, acá aparecen los consumos y promedios.</p>';
+    return;
+  }
+  let html = '<p class="cont-hint" style="margin:0 4px 8px;">Consumo = última lectura menos la anterior. El promedio diario usa la diferencia de fechas, así que sirve igual con lecturas semanales.</p>';
+  contSecciones().forEach(sec => {
+    html += `<p class="cont-sec-title">${escapeHtml(sec.nombre)}</p>`;
+    sec.grupos.forEach(g => {
+      let filas = '';
+      g.items.forEach(c => {
+        const arr = datos[c.id] || [];
+        if(!arr.length) return;
+        const ult = arr[arr.length - 1];
+        if(!c.acum || arr.length < 2){
+          filas += `<tr><td>${escapeHtml(c.nombre)}</td><td class="num">${contFmt(ult[1])}<br><span class="cont-unit">${contFmtFecha(ult[0])}</span></td><td class="num">—</td><td class="num">—</td></tr>`;
+          return;
+        }
+        const pen = arr[arr.length - 2];
+        const cons = ult[1] - pen[1];
+        const dias = Math.max(1, contDias(pen[0], ult[0]));
+        // Promedio de los últimos 30 días: desde la lectura más antigua dentro de la ventana
+        const limite = contIsoDeFecha(new Date(new Date(ult[0] + 'T00:00:00').getTime() - 30 * 86400000));
+        let base = arr[0];
+        for(const e of arr) if(e[0] >= limite){ base = e; break; }
+        const d30 = contDias(base[0], ult[0]);
+        const prom30 = d30 > 0 ? (ult[1] - base[1]) / d30 : null;
+        filas += `<tr><td>${escapeHtml(c.nombre)}</td><td class="num">${contFmt(ult[1])}<br><span class="cont-unit">${contFmtFecha(ult[0])}</span></td><td class="num">${contFmt(cons)}<br><span class="cont-unit">${dias} día(s)</span></td><td class="num">${prom30 === null ? '—' : contFmt(prom30)}</td></tr>`;
+      });
+      if(!filas) return;
+      html += `<div class="cont-card" style="padding:8px 10px;"><p class="cont-card-title" style="margin:4px 4px 6px;">${escapeHtml(g.nombre)} <span class="cont-unit">${escapeHtml(g.items[0].unidad)}</span></p>
+        <table class="cont-table"><thead><tr><th>Contador</th><th class="num" style="text-align:right">Última</th><th style="text-align:right">Consumo</th><th style="text-align:right">Prom./día (30 d)</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+    });
+  });
+  panel.innerHTML = html;
+}
+
+// ---- Vincular (solo Jhony) ----
+function contAbrirVinculo(){
+  const cfg = contConfig();
+  document.getElementById('contLinkUrl').value = cfg ? cfg.url : '';
+  document.getElementById('contLinkClave').value = cfg ? cfg.clave : '';
+  document.getElementById('contLinkCodigo').value = '';
+  document.getElementById('contLinkError').style.display = 'none';
+  document.getElementById('contLinkModal').style.display = 'flex';
+}
+function contErrorVinculo(msg){
+  const e = document.getElementById('contLinkError');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+document.getElementById('contLinkBtn').addEventListener('click', contAbrirVinculo);
+document.getElementById('contLinkCancelBtn').addEventListener('click', () => {
+  document.getElementById('contLinkModal').style.display = 'none';
+});
+document.getElementById('contLinkCodigo').addEventListener('input', () => {
+  const cfg = contConfigDeCodigo(document.getElementById('contLinkCodigo').value);
+  if(cfg){
+    document.getElementById('contLinkUrl').value = cfg.url;
+    document.getElementById('contLinkClave').value = cfg.clave;
+  }
+});
+document.getElementById('contLinkCopiarBtn').addEventListener('click', async () => {
+  const url = document.getElementById('contLinkUrl').value.trim();
+  const clave = document.getElementById('contLinkClave').value.trim();
+  if(!url || !clave){ contErrorVinculo('Completá la dirección y la clave primero.'); return; }
+  const codigo = contCodigoDeConfig({ url, clave });
+  try{ await navigator.clipboard.writeText(codigo); showToast('Código copiado. Pegalo en las otras tablets.'); }
+  catch(e){ document.getElementById('contLinkCodigo').value = codigo; contErrorVinculo('No se pudo copiar solo: el código quedó en el tercer campo, copialo a mano.'); }
+});
+document.getElementById('contLinkSaveBtn').addEventListener('click', () => {
+  const url = document.getElementById('contLinkUrl').value.trim();
+  const clave = document.getElementById('contLinkClave').value.trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)){ contErrorVinculo('La dirección debe ser la URL que termina en /exec.'); return; }
+  if(clave.length < 12){ contErrorVinculo('La clave es demasiado corta.'); return; }
+  contGuardar(CONT_CFG_KEY, { url, clave });
+  document.getElementById('contLinkModal').style.display = 'none';
+  showToast('Tablet vinculada.');
+  contSincronizar(true);
+});
+
+document.getElementById('contFecha').addEventListener('change', contActualizarHints);
+document.getElementById('contGuardarBtn').addEventListener('click', contGuardarLecturas);
+document.getElementById('contSyncBtn').addEventListener('click', () => contSincronizar(true));
+document.querySelectorAll('.cont-tab').forEach(b => b.addEventListener('click', () => contActivarTab(b.dataset.ctab)));
+
 // Migración única (v1.22): "Sala de Calderas" se dividió en 3 salas. Los registros ya
 // guardados se reparten para no perder historial: cada tarea pasa a la sala que ahora
 // le corresponde, con la misma fecha y responsable.
@@ -5457,6 +6055,17 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.24',
+    date: '2026-10-11',
+    changes: [
+      'Nuevo: módulo "Contadores" (luz, gas y agua) en la pantalla de plantas. Carga de lecturas por fecha con 53 contadores, clientes por hotel y aviso si una lectura es menor que la anterior.',
+      'Los 3 totales eléctricos (1.18.0, 1.58.0 y 1.16.0) se calculan solos.',
+      'Las lecturas se guardan en la tablet y se envían a una hoja de Google compartida; si no hay señal, quedan en cola y se envían cuando vuelve la conexión.',
+      'Pestaña "Consumos": última lectura, consumo desde la anterior y promedio diario de los últimos 30 días (sirve también con lecturas semanales).',
+      'Solo el administrador vincula cada tablet (dirección del servicio + clave); la clave queda solo en esa tablet.',
+    ]
+  },
   {
     version: 'v1.23',
     date: '2026-10-08',
