@@ -5528,9 +5528,9 @@ const CONT_CATALOGO = [
   { id:"1.16.5", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.5", unidad:"kW", derivado:false, acum:false },
   { id:"1.16.6", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.6", unidad:"kW", derivado:false, acum:false },
   { id:"1.16.0", sec:"Electricidad", grp:"Maxímetro", nombre:"1.16.0 (máximo)", unidad:"kW", derivado:true, acum:false },
-  { id:"el_cc", sec:"Electricidad", grp:"Centro de Convenciones", nombre:"C. Convenciones", unidad:"MWh", derivado:false, acum:true },
-  { id:"placas_h4", sec:"Electricidad", grp:"Rendimiento de placas", nombre:"Hotel 4*", unidad:"MWh", derivado:false, acum:true },
-  { id:"placas_h5", sec:"Electricidad", grp:"Rendimiento de placas", nombre:"Hotel 5*", unidad:"MWh", derivado:false, acum:true },
+  { id:"el_cc", sec:"Electricidad", grp:"Centro de Convenciones", nombre:"C. Convenciones", unidad:"GWh", fk:1000000, derivado:false, acum:true },
+  { id:"placas_h4", sec:"Electricidad", grp:"Electricidad por hotel", nombre:"Hotel 4*", unidad:"GWh", fk:1000000, derivado:false, acum:true },
+  { id:"placas_h5", sec:"Electricidad", grp:"Electricidad por hotel", nombre:"Hotel 5*", unidad:"GWh", fk:1000000, derivado:false, acum:true },
   { id:"masajes_h4", sec:"Electricidad", grp:"Centro de masajes", nombre:"Contador Hotel 4*", unidad:"kWh", derivado:false, acum:true },
   { id:"masajes_h5", sec:"Electricidad", grp:"Centro de masajes", nombre:"Contador Hotel 5*", unidad:"kWh", derivado:false, acum:true },
   { id:"gas_cocina4", sec:"Gas", grp:"Gas", nombre:"Cocina 4*", unidad:"m3", derivado:false, acum:true },
@@ -5825,7 +5825,7 @@ function contEvaluar(c, datos, fecha){
   if(ant){
     const dif = v - ant[1];
     const dias = Math.max(1, contDias(ant[0], fecha));
-    return { estado: 'ok', texto: `${textoAnt} · +${contFmt(dif)} en ${dias} día(s)`, valor: v };
+    return { estado: 'ok', texto: `${textoAnt} · +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s)`, valor: v };
   }
   return { estado: 'ok', texto: textoAnt, valor: v };
 }
@@ -5916,18 +5916,19 @@ function contRenderConsumos(){
           return;
         }
         const pen = arr[arr.length - 2];
-        const cons = ult[1] - pen[1];
+        const fk = c.fk || 1;
+        const cons = (ult[1] - pen[1]) * fk;
         const dias = Math.max(1, contDias(pen[0], ult[0]));
         // Promedio de los últimos 30 días: desde la lectura más antigua dentro de la ventana
         const limite = contIsoDeFecha(new Date(new Date(ult[0] + 'T00:00:00').getTime() - 30 * 86400000));
         let base = arr[0];
         for(const e of arr) if(e[0] >= limite){ base = e; break; }
         const d30 = contDias(base[0], ult[0]);
-        const prom30 = d30 > 0 ? (ult[1] - base[1]) / d30 : null;
+        const prom30 = d30 > 0 ? (ult[1] - base[1]) * fk / d30 : null;
         filas += `<tr><td>${escapeHtml(c.nombre)}</td><td class="num">${contFmt(ult[1])}<br><span class="cont-unit">${contFmtFecha(ult[0])}</span></td><td class="num">${contFmt(cons)}<br><span class="cont-unit">${dias} día(s)</span></td><td class="num">${prom30 === null ? '—' : contFmt(prom30)}</td></tr>`;
       });
       if(!filas) return;
-      html += `<div class="cont-card" style="padding:8px 10px;"><p class="cont-card-title" style="margin:4px 4px 6px;">${escapeHtml(g.nombre)} <span class="cont-unit">${escapeHtml(g.items[0].unidad)}</span></p>
+      html += `<div class="cont-card" style="padding:8px 10px;"><p class="cont-card-title" style="margin:4px 4px 6px;">${escapeHtml(g.nombre)} <span class="cont-unit">${escapeHtml(g.items[0].unidad)}${g.items[0].fk ? ' · consumo en kWh' : ''}</span></p>
         <table class="cont-table"><thead><tr><th>Contador</th><th class="num" style="text-align:right">Última</th><th style="text-align:right">Consumo</th><th style="text-align:right">Prom./día (30 d)</th></tr></thead><tbody>${filas}</tbody></table></div>`;
     });
   });
@@ -6055,6 +6056,14 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.25',
+    date: '2026-10-14',
+    changes: [
+      'Contadores: los contadores eléctricos de Hotel 4*, Hotel 5* y Centro de Convenciones están en GWh (como en el Excel). Ahora el consumo se muestra en kWh.',
+      'El grupo "Rendimiento de placas" pasa a llamarse "Electricidad por hotel".',
+    ]
+  },
   {
     version: 'v1.24',
     date: '2026-10-11',
