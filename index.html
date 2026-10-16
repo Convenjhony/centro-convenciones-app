@@ -64,6 +64,7 @@
   .cont-input:focus{ outline:2px solid #3A6FD8; }
   .cont-input[readonly]{ opacity:.7; }
   .cont-row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cont-desc{ margin:-2px 0 6px; font-size:11.5px; line-height:1.35; color:var(--color-ink-soft); }
   .cont-hint{ margin:6px 0 0; font-size:12px; color:var(--color-ink-soft); }
   .cont-sec-title{ margin:18px 4px 6px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-ink-soft); }
   .cont-grp{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
@@ -5565,6 +5566,20 @@ const CONT_CATALOGO = [
   { id:"os_cc", sec:"Agua", grp:"Ósmosis", nombre:"C. Convenciones", unidad:"m3", derivado:false, acum:true }
 ];
 
+// Ficha de cada contador (descripción y nº de serie). Se completa con las fotos de cada contador.
+// Verificado en campo el 15-10-2026: RIEGO = tubería azul con flecha verde; WC = tubería rosa con flecha negra "A.W.S.".
+const CONT_FICHA = {
+  ar_h4:{ desc:'Riego Hotel 4* (goteo y aspersores). Tubería azul, flecha verde "RIEGO".', serie:'16345717' },
+  ar_h5:{ desc:'Riego Hotel 5* (goteo y aspersores). Tubería azul, flecha verde "RIEGO".', serie:'16345703' },
+  ar_cc:{ desc:'Riego Sala de Convenciones. Tubería azul, flecha verde. Es el contador grande (unos 7.000 m3).', serie:'' },
+  wc_h4:{ desc:'Agua de WC (A.W.C.) Hotel 4*. Tubería rosa, flecha negra "A.W.S."', serie:'' },
+  wc_h5:{ desc:'Agua de WC (A.W.C.) Hotel 5*. Tubería rosa, flecha negra "A.W.S."', serie:'' },
+  wc_cc:{ desc:'Agua de WC (A.W.C.) Sala de Convenciones. Tubería rosa, flecha negra. Es el contador chico (unos 700 m3).', serie:'16340284' },
+  ab_llenado:{ desc:'Llenado de calderas. La lectura oscila unos m3 hacia arriba y abajo: no avisa por bajadas chicas.', ruido:true },
+  ad_riego_h4:{ desc:'Red de arquetas verdes.' }, ad_riego_h5:{ desc:'Red de arquetas verdes.' },
+  ad_baldeo_h4:{ desc:'Grifos del sótano.' }, ad_baldeo_h5:{ desc:'Grifos del sótano y riego de jardín en techos.' },
+};
+
 // Los 3 totales eléctricos los calcula la app: 1.18.0 y 1.58.0 = suma de los 6 contadores,
 // 1.16.0 = el mayor de los 6 maxímetros (así lo hace el Excel actual).
 const CONT_DERIVADOS = {
@@ -5785,7 +5800,7 @@ function contRenderLecturas(){
       g.items.forEach(c => {
         const val = contForm[c.id] !== undefined ? contForm[c.id] : '';
         html += `<div class="cont-item" data-cid="${escapeHtml(c.id)}">
-          <div class="cont-item-top"><span>${escapeHtml(c.nombre)}</span><span class="cont-unit">${escapeHtml(c.unidad)}</span></div>
+          <div class="cont-item-top"><span>${escapeHtml(c.nombre)}</span><span class="cont-unit">${escapeHtml(c.unidad)}</span></div>${contFichaHtml(c.id)}
           <input type="text" inputmode="decimal" class="cont-input" data-cid="${escapeHtml(c.id)}" value="${escapeHtml(val)}" ${c.derivado ? 'readonly placeholder="se calcula solo"' : 'placeholder="Lectura"'} autocomplete="off">
           <p class="cont-hint"></p></div>`;
       });
@@ -5797,6 +5812,28 @@ function contRenderLecturas(){
     inp.addEventListener('input', () => { contForm[inp.dataset.cid] = inp.value; contActualizarHints(); });
   });
   contActualizarHints();
+}
+
+function contFichaHtml(id){
+  const f = CONT_FICHA[id];
+  if(!f) return '';
+  const partes = [];
+  if(f.desc) partes.push(escapeHtml(f.desc));
+  if(f.serie !== undefined) partes.push(f.serie ? 'Serie ' + escapeHtml(f.serie) : 'Serie: sin registrar');
+  return '<p class="cont-desc">' + partes.join(' · ') + '</p>';
+}
+
+// Ritmo alto normal de un contador: percentil 90 del consumo por día en las últimas lecturas (null si hay pocas).
+function contRitmo(datos, id){
+  const arr = (datos[id] || []).slice(-31);
+  const r = [];
+  for(let i = 1; i < arr.length; i++){
+    const d = contDias(arr[i-1][0], arr[i][0]), dif = arr[i][1] - arr[i-1][1];
+    if(d > 0 && dif >= 0) r.push(dif / d);
+  }
+  if(r.length < 3) return null;
+  r.sort((a, b) => a - b);
+  return r[Math.min(r.length - 1, Math.floor(r.length * 0.9))];   // consumo alto normal (percentil 90)
 }
 
 function contFechaElegida(){ return document.getElementById('contFecha').value || contHoyIso(); }
@@ -5821,10 +5858,22 @@ function contEvaluar(c, datos, fecha){
   if(raw === undefined || String(raw).trim() === '') return { estado: 'vacio', texto: textoAnt, valor: null };
   const v = contParseNum(raw);
   if(isNaN(v)) return { estado: 'bad', texto: 'Escribí solo números (con coma para decimales)', valor: null };
-  if(c.acum && ant && v < ant[1]) return { estado: 'warn', texto: `⚠️ Menor que la anterior (${contFmt(ant[1])}). ¿Se reinició o cambió el contador?`, valor: v };
+  const cifras = n => String(Math.floor(Math.abs(n))).length;
+  if(c.acum && ant && ant[1] >= 1000 && cifras(v) !== cifras(ant[1]))
+    return { estado: 'warn', tipo: 'cifras', texto: `⚠️ Tiene ${cifras(v)} cifras y la anterior ${cifras(ant[1])} (${contFmt(ant[1])}). ¿Falta o sobra un dígito?`, valor: v };
+  const ruido = (CONT_FICHA[c.id] || {}).ruido;
+  if(c.acum && ant && v < ant[1] && !(ruido && ant[1] - v <= Math.max(5, ant[1] * 0.01))) return { estado: 'warn', tipo: 'baja', texto: `⚠️ Menor que la anterior (${contFmt(ant[1])}). ¿Se reinició o cambió el contador?`, valor: v };
   if(ant){
     const dif = v - ant[1];
     const dias = Math.max(1, contDias(ant[0], fecha));
+    if(c.acum){
+      const ritmo = contRitmo(datos, c.id);
+      if(ritmo !== null){
+        const esperado = ritmo * dias;
+        if(dif > Math.max(esperado * 4, Math.abs(ant[1]) * 0.003))
+          return { estado: 'warn', tipo: 'salto', texto: `⚠️ Salto grande: +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s); lo normal es hasta unos ${contFmt(esperado * (c.fk || 1))}. Revisá la lectura.`, valor: v };
+      }
+    }
     return { estado: 'ok', texto: `${textoAnt} · +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s)`, valor: v };
   }
   return { estado: 'ok', texto: textoAnt, valor: v };
@@ -5859,12 +5908,13 @@ function contGuardarLecturas(){
   const datos = contDatos();
   const lecturas = [];
   const avisos = [];
+  const TIPOS = { baja:'menor que la anterior', cifras:'cantidad de cifras distinta', salto:'salto grande' };
   for(const c of CONT_CATALOGO){
     const ev = contEvaluar(c, datos, fecha);
     if(ev.estado === 'bad'){ showToast('Revisá "' + c.nombre + '": escribí solo números.'); return; }
     if(ev.estado === 'vacio' || ev.valor === null) continue;
-    if(ev.estado === 'warn') avisos.push('• ' + c.nombre + ' (' + c.grp + '): ' + contFmt(ev.valor) + ' < ' + contFmt(contAnterior(datos, c.id, fecha)[1]));
-    lecturas.push({ id: c.id, valor: ev.valor, obs: '' });
+    if(ev.estado === 'warn') avisos.push('• ' + c.nombre + ' (' + c.grp + '): ' + contFmt(ev.valor) + ' · ' + (TIPOS[ev.tipo] || 'revisar') + ' (anterior ' + contFmt(contAnterior(datos, c.id, fecha)[1]) + ')');
+    lecturas.push({ id: c.id, valor: ev.valor, obs: ev.estado === 'warn' ? 'confirmada con aviso: ' + (TIPOS[ev.tipo] || 'revisar') : '' });
   }
   const h4Txt = document.getElementById('contClientesH4').value.trim();
   const h5Txt = document.getElementById('contClientesH5').value.trim();
@@ -5875,7 +5925,7 @@ function contGuardarLecturas(){
     clientes = { h4, h5 };
   }
   if(!lecturas.length && !clientes){ showToast('No hay nada para guardar todavía.'); return; }
-  if(avisos.length && !confirm('Estas lecturas son MENORES que la anterior:\n\n' + avisos.join('\n') + '\n\n¿Guardar igual?')) return;
+  if(avisos.length && !confirm('Estas lecturas parecen raras:\n\n' + avisos.join('\n') + '\n\n¿Están bien así? Si hay un error de tipeo, tocá Cancelar y corregí.')) return;
 
   const lote = { lote: contNuevoLote(), fecha, usuario: currentUser ? currentUser.name : '', lecturas };
   if(clientes) lote.clientes = clientes;
@@ -6056,6 +6106,14 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.26',
+    date: '2026-10-16',
+    changes: [
+      'Contadores: cada contador de riego y de agua WC muestra su descripción y su número de serie (verificados con fotos en campo).',
+      'Contadores: nuevo aviso antes de guardar si una lectura tiene distinta cantidad de cifras que la anterior (falta o sobra un dígito) o si el salto es mucho mayor de lo normal. Las lecturas confirmadas con aviso quedan marcadas en la hoja.',
+    ]
+  },
   {
     version: 'v1.25',
     date: '2026-10-14',
