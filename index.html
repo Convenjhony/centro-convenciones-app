@@ -5578,6 +5578,12 @@ const CONT_FICHA = {
   ab_llenado:{ desc:'Llenado de calderas. La lectura oscila unos m3 hacia arriba y abajo: no avisa por bajadas chicas.', ruido:true },
   ad_riego_h4:{ desc:'Red de arquetas verdes.' }, ad_riego_h5:{ desc:'Red de arquetas verdes.' },
   ad_baldeo_h4:{ desc:'Grifos del sótano.' }, ad_baldeo_h5:{ desc:'Grifos del sótano y riego de jardín en techos.' },
+  gas_calderas:{ desc:'Gas calderas. Elster RVG G160 (2002).', serie:'75023015' },
+  gas_cocina4:{ desc:'Gas cocina Hotel 4*. Itron G65 (2015).', serie:'64-15000097' },
+  gas_cocina5:{ desc:'Gas cocina Hotel 5*. Itron G65 (2017).', serie:'62-17000081' },
+  ag_c1:{ desc:'Agua municipal, contador 1. Genebre WP-SDC DN65.', serie:'E-16-118037' },
+  ag_c2:{ desc:'Agua municipal, contador 2. Genebre WP-SDC DN65.', serie:'E-16-119593' },
+  ag_general:{ desc:'Agua municipal, contador general (digital Contazara, pantalla). Tiene pantalla con dos líneas: se lee la de arriba.', serie:'P21UF539634E' },
 };
 
 // Los 3 totales eléctricos los calcula la app: 1.18.0 y 1.58.0 = suma de los 6 contadores,
@@ -6106,6 +6112,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.27',
+    date: '2026-10-21',
+    changes: [
+      'Contadores: fichas de gas (calderas y cocinas) y de agua municipal con su número de serie, leídos de las fotos del contador.',
+    ]
+  },
   {
     version: 'v1.26',
     date: '2026-10-16',
