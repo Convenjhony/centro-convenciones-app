@@ -5571,13 +5571,16 @@ const CONT_CATALOGO = [
 const CONT_FICHA = {
   ar_h4:{ desc:'Riego Hotel 4* (goteo y aspersores). Tubería azul, flecha verde "RIEGO".', serie:'16345717' },
   ar_h5:{ desc:'Riego Hotel 5* (goteo y aspersores). Tubería azul, flecha verde "RIEGO".', serie:'16345703' },
-  ar_cc:{ desc:'Riego Sala de Convenciones. Tubería azul, flecha verde. Es el contador grande (unos 7.000 m3).', serie:'' },
-  wc_h4:{ desc:'Agua de WC (A.W.C.) Hotel 4*. Tubería rosa, flecha negra "A.W.S."', serie:'' },
-  wc_h5:{ desc:'Agua de WC (A.W.C.) Hotel 5*. Tubería rosa, flecha negra "A.W.S."', serie:'' },
+  ar_cc:{ desc:'Riego Sala de Convenciones. Tubería azul, flecha verde. Es el contador grande (unos 7.000 m3).', serie:'16345716' },
+  wc_h4:{ desc:'Agua de WC (A.W.C.) Hotel 4*. Tubería rosa, flecha negra "A.W.S."', serie:'16345714' },
+  wc_h5:{ desc:'Agua de WC (A.W.C.) Hotel 5*. Tubería rosa, flecha negra "A.W.S."', serie:'16340184' },
   wc_cc:{ desc:'Agua de WC (A.W.C.) Sala de Convenciones. Tubería rosa, flecha negra. Es el contador chico (unos 700 m3).', serie:'16340284' },
   ab_llenado:{ desc:'Llenado de calderas. La lectura oscila unos m3 hacia arriba y abajo: no avisa por bajadas chicas.', ruido:true },
   ad_riego_h4:{ desc:'Red de arquetas verdes.' }, ad_riego_h5:{ desc:'Red de arquetas verdes.' },
-  ad_baldeo_h4:{ desc:'Grifos del sótano.' }, ad_baldeo_h5:{ desc:'Grifos del sótano y riego de jardín en techos.' },
+  ad_baldeo_h4:{ desc:'Grifos del sótano.', serie:'17321476' }, ad_baldeo_h5:{ desc:'Grifos del sótano y riego de jardín en techos.', serie:'16340260' },
+  ad_piscina_h4:{ desc:'Llenado de piscina Hotel 4*.', serie:'16347457' },
+  os_h5:{ desc:'Ósmosis Hotel 5*.', serie:'16340188' }, os_cc:{ desc:'Ósmosis Centro de Convenciones.', serie:'16340209' },
+  ab_boilers_g2:{ desc:'Llenado de boilers G2.', serie:'16319149' }, ab_h4:{ desc:'Agua blanda Hotel 4*.', serie:'16341947' }, ab_cc:{ desc:'Agua blanda Centro de Convenciones.', serie:'16340283' },
   gas_calderas:{ desc:'Gas calderas. Elster RVG G160 (2002).', serie:'75023015' },
   gas_cocina4:{ desc:'Gas cocina Hotel 4*. Itron G65 (2015).', serie:'64-15000097' },
   gas_cocina5:{ desc:'Gas cocina Hotel 5*. Itron G65 (2017).', serie:'62-17000081' },
@@ -6112,6 +6115,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.28',
+    date: '2026-10-21',
+    changes: [
+      'Contadores: números de serie de riego CC, agua WC, baldeos, piscina 4*, ósmosis, boilers G2 y agua blanda (Hotel 4* y CC), leídos de las placas de cada contador.',
+    ]
+  },
   {
     version: 'v1.27',
     date: '2026-10-21',
