@@ -5575,8 +5575,9 @@ const CONT_FICHA = {
   wc_h4:{ desc:'Agua de WC (A.W.C.) Hotel 4*. Tubería rosa, flecha negra "A.W.S."', serie:'16345714' },
   wc_h5:{ desc:'Agua de WC (A.W.C.) Hotel 5*. Tubería rosa, flecha negra "A.W.S."', serie:'16340184' },
   wc_cc:{ desc:'Agua de WC (A.W.C.) Sala de Convenciones. Tubería rosa, flecha negra. Es el contador chico (unos 700 m3).', serie:'16340284' },
-  ab_llenado:{ desc:'Llenado de calderas. La lectura oscila unos m3 hacia arriba y abajo: no avisa por bajadas chicas.', ruido:true },
+  ab_llenado:{ desc:'Llenado de calderas (primario). La lectura oscila unos m3 hacia arriba y abajo: no avisa por bajadas chicas.', serie:'1834010126', ruido:true },
   ad_riego_h4:{ desc:'Red de arquetas verdes.' }, ad_riego_h5:{ desc:'Red de arquetas verdes.' },
+  ad_riego_cc:{ desc:'Grifos de jardín, Sala de Convenciones. Contador pequeño con aro oxidado: la lectura casi no cambia (unos 1.795 m3).', serie:'16104854' },
   ad_baldeo_h4:{ desc:'Grifos del sótano.', serie:'17321476' }, ad_baldeo_h5:{ desc:'Grifos del sótano y riego de jardín en techos.', serie:'16340260' },
   ad_piscina_h4:{ desc:'Llenado de piscina Hotel 4*.', serie:'16347457' },
   os_h5:{ desc:'Ósmosis Hotel 5*.', serie:'16340188' }, os_cc:{ desc:'Ósmosis Centro de Convenciones.', serie:'16340209' },
@@ -6115,6 +6116,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.29',
+    date: '2026-10-21',
+    changes: [
+      'Contadores: números de serie de llenado de calderas y de riego de jardín CC.',
+    ]
+  },
   {
     version: 'v1.28',
     date: '2026-10-21',
