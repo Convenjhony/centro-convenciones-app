@@ -2990,6 +2990,8 @@ const USERS = [
   { id:'jhony', name:'Jhony', avatar:'🧑‍🔧', days:[3,4,5,6,0], turno:'Miércoles a Domingo' },
   { id:'german', name:'Germán', avatar:'👨‍💼', days:[1,2,3,4,5], turno:'Lunes a Viernes' },
   { id:'paul', name:'Paul', avatar:'🧑‍💻', days:[0,1,2,3,4], turno:'Domingo a Jueves' },
+  // Ezequiel: acceso solo al módulo Contadores (no ve plantas ni salas)
+  { id:'ezequiel', name:'Ezequiel', avatar:'🧑', days:[0,1,2,3,4,5,6], turno:'Todos los días', soloContadores:true },
 ];
 const SESSION_KEY = 'session-current-user';
 const DIAS_SEMANA_LARGO = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -3431,6 +3433,12 @@ document.getElementById('changePinBtn').addEventListener('click', ()=>{
 });
 
 function showFloorPickerScreen(){
+  // Usuarios con acceso solo a Contadores: nunca ven plantas ni salas
+  if(currentUser && currentUser.soloContadores){
+    applyTheme();
+    showContadoresScreen();
+    return;
+  }
   contScreen.style.display = 'none';
   userPicker.style.display = 'none';
   salaPicker.style.display = 'none';
@@ -5765,7 +5773,7 @@ function showContadoresScreen(){
   salaPicker.style.display = 'none';
   contScreen.style.display = 'block';
   switchUserBtn.style.display = 'flex';
-  backToFloorsBtn.style.display = 'flex';
+  backToFloorsBtn.style.display = (currentUser && currentUser.soloContadores) ? 'none' : 'flex';
   window.scrollTo(0, 0);
   applyTheme();
   const f = document.getElementById('contFecha');
@@ -6121,6 +6129,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.31',
+    date: '2026-11-08',
+    changes: [
+      'Nuevo usuario Ezequiel, con acceso solo al módulo Contadores (no ve plantas ni salas).',
+    ]
+  },
   {
     version: 'v1.30',
     date: '2026-10-23',
