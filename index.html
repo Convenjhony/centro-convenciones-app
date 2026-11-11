@@ -80,6 +80,7 @@
   .cont-item .cont-input.bad{ border-color:#c0392b; }
   .cont-savebar{ position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--color-bg); border-top:1px solid var(--color-border); display:flex; justify-content:center; z-index:50; }
   .cont-savebar .btn{ width:100%; max-width:688px; }
+  .cont-savebar{ gap:0; }
   .cont-table{ width:100%; border-collapse:collapse; font-size:13px; }
   .cont-table th{ text-align:left; font-weight:600; color:var(--color-ink-soft); padding:6px 8px; font-size:12px; }
   .cont-table td{ padding:8px; border-top:1px solid var(--color-border); color:var(--color-ink); vertical-align:top; }
@@ -1669,9 +1670,14 @@
         <div><label class="cont-label" for="contClientesH5">Hotel 5*</label><input type="text" inputmode="numeric" id="contClientesH5" class="cont-input" placeholder="0"></div>
       </div>
     </div>
+    <div class="cont-card" style="padding:10px 14px;">
+      <button type="button" id="contFaltanBtn" class="cont-mini-btn" style="display:none;"></button>
+      <p class="cont-hint" style="margin:6px 0 0;">Podés guardar solo los contadores que ya leíste y completar el resto más tarde, el mismo día: elegí la misma fecha y tocá "Ver solo los que faltan".</p>
+    </div>
     <div id="contLecturasLista"></div>
     <div class="cont-savebar">
-      <button type="button" id="contGuardarBtn" class="btn btn-save">💾 Guardar lecturas</button>
+      <button type="button" id="contVolverBtn" class="btn btn-back" style="width:auto;flex:0 0 auto;margin-right:10px;">← Volver</button>
+      <button type="button" id="contGuardarBtn" class="btn btn-save" style="flex:1;">💾 Guardar lecturas</button>
     </div>
   </div>
   <div id="contPanelConsumos" style="display:none;"></div>
@@ -5624,10 +5630,24 @@ function contGuardar(key, val){
 function contPad(n){ return String(n).padStart(2, '0'); }
 function contIsoDeFecha(d){ return d.getFullYear() + '-' + contPad(d.getMonth() + 1) + '-' + contPad(d.getDate()); }
 function contHoyIso(){ return contIsoDeFecha(new Date()); }
+// Separador de miles con punto y decimales con coma (1.234.567,89). Siempre agrupa, también los de 4 cifras.
+function contAgrupar(txt){
+  const neg = txt.charAt(0) === '-';
+  if(neg) txt = txt.slice(1);
+  const partes = txt.split('.');
+  const ent = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg ? '-' : '') + ent + (partes.length > 1 && partes[1] !== '' ? ',' + partes[1] : '');
+}
 function contFmt(n){
   if(n === null || n === undefined || isNaN(n)) return '—';
-  return Number(n).toLocaleString('es-ES', { maximumFractionDigits: 4 });
+  return contAgrupar(Number(n).toFixed(4).replace(/\.?0+$/, ''));
 }
+// Contadores en GWh: la pantalla del medidor muestra 5 dígitos (4 decimales debajo de 10, 3 decimales desde 10).
+function contFmtGwh(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return contAgrupar(Number(n).toFixed(Math.abs(n) >= 10 ? 3 : 4));
+}
+function contFmtC(c, n){ return c && c.fk ? contFmtGwh(n) : contFmt(n); }
 function contFmtFecha(iso){ const p = iso.split('-'); return p[2] + '/' + p[1]; }
 function contDias(a, b){ // días entre dos fechas ISO (b - a)
   const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
@@ -5635,7 +5655,7 @@ function contDias(a, b){ // días entre dos fechas ISO (b - a)
 }
 function contParseNum(s){
   if(s === null || s === undefined) return NaN;
-  const t = String(s).trim().replace(/\s/g, '').replace(',', '.');
+  const t = String(s).trim().replace(/\s/g, '').replace(',', '.');   // coma o punto = decimal (los medidores no llevan separador de miles)
   if(!t || !/^\d+(\.\d+)?$/.test(t)) return NaN;
   return Number(t);
 }
@@ -5780,6 +5800,8 @@ function showContadoresScreen(){
   const hoy = contHoyIso();
   f.max = hoy;
   if(!f.value) f.value = hoy;
+  const vb = document.getElementById('contVolverBtn');
+  if(vb) vb.style.display = (currentUser && currentUser.soloContadores) ? 'none' : 'inline-flex';
   contActualizarChip();
   contRenderLecturas();
   contRenderConsumos();
@@ -5812,15 +5834,29 @@ function contSecciones(){
   return orden;
 }
 
+let contSoloFaltan = false;   // true = mostrar solo los contadores sin lectura en la fecha elegida
 function contRenderLecturas(){
   const cont = document.getElementById('contLecturasLista');
+  const datosVista = contDatos(), fechaVista = contFechaElegida();
   let html = '';
+  const faltan = CONT_CATALOGO.filter(c => !c.derivado && !(datosVista[c.id] || []).some(x => x[0] === fechaVista));
+  const hecho = CONT_CATALOGO.filter(c => !c.derivado).length - faltan.length;
+  const btnF = document.getElementById('contFaltanBtn');
+  if(btnF){
+    btnF.textContent = contSoloFaltan ? 'Ver todos los contadores' : 'Ver solo los que faltan (' + faltan.length + ')';
+    btnF.style.display = hecho > 0 ? 'inline-block' : 'none';
+    if(hecho === 0) contSoloFaltan = false;
+  }
+  if(contSoloFaltan && !faltan.length) html += '<p class="cont-empty">Ya están todos los contadores de esta fecha. 👌</p>';
   contSecciones().forEach(sec => {
     html += `<p class="cont-sec-title">${escapeHtml(sec.nombre)}</p>`;
     sec.grupos.forEach(g => {
       const abierto = sec.nombre === 'Electricidad' ? '' : '';
+      const htmlAntes = html;
       html += `<details class="cont-grp" open${abierto}><summary><span>${escapeHtml(g.nombre)}</span><span class="cont-grp-count">${g.items.filter(i => !i.derivado).length} contador(es) · ${escapeHtml(g.items[0].unidad)}</span></summary>`;
       g.items.forEach(c => {
+        if(contSoloFaltan && !c.derivado && (datosVista[c.id] || []).some(x => x[0] === fechaVista)) return;
+        if(contSoloFaltan && c.derivado) return;
         const val = contForm[c.id] !== undefined ? contForm[c.id] : '';
         html += `<div class="cont-item" data-cid="${escapeHtml(c.id)}">
           <div class="cont-item-top"><span>${escapeHtml(c.nombre)}</span><span class="cont-unit">${escapeHtml(c.unidad)}</span></div>${contFichaHtml(c.id)}
@@ -5828,13 +5864,26 @@ function contRenderLecturas(){
           <p class="cont-hint"></p></div>`;
       });
       html += '</details>';
+      if(contSoloFaltan && !html.slice(htmlAntes.length).includes('class="cont-item"')) html = htmlAntes;   // grupo sin contadores pendientes
     });
   });
   cont.innerHTML = html;
   cont.querySelectorAll('input.cont-input:not([readonly])').forEach(inp => {
     inp.addEventListener('input', () => { contForm[inp.dataset.cid] = inp.value; contActualizarHints(); });
+    inp.addEventListener('focus', () => { if(contForm[inp.dataset.cid] !== undefined) inp.value = contForm[inp.dataset.cid]; });
+    inp.addEventListener('blur', () => contMostrarConMiles(inp));
   });
+  cont.querySelectorAll('input.cont-input:not([readonly])').forEach(contMostrarConMiles);
   contActualizarHints();
+}
+// Muestra el valor con puntos de miles y coma decimal; el texto crudo queda en contForm.
+function contMostrarConMiles(inp){
+  const raw = contForm[inp.dataset.cid];
+  if(raw === undefined || String(raw).trim() === '') return;
+  const v = contParseNum(raw);
+  if(isNaN(v)) return;
+  const c = CONT_CATALOGO.find(x => x.id === inp.dataset.cid);
+  inp.value = contFmtC(c, v);
 }
 
 function contFichaHtml(id){
@@ -5872,7 +5921,7 @@ function contValorDerivado(id){
 function contEvaluar(c, datos, fecha){
   // Devuelve { estado:'vacio'|'ok'|'warn'|'bad', texto, valor }
   const ant = contAnterior(datos, c.id, fecha);
-  const textoAnt = ant ? `Anterior: ${contFmt(ant[1])} (${contFmtFecha(ant[0])})` : 'Sin lectura anterior';
+  const textoAnt = ant ? `Anterior: ${contFmtC(c, ant[1])} (${contFmtFecha(ant[0])})` : 'Sin lectura anterior';
   if(c.derivado){
     const v = contValorDerivado(c.id);
     return { estado: v === null ? 'vacio' : 'ok', texto: v === null ? 'Se calcula cuando estén los 6 contadores · ' + textoAnt : textoAnt, valor: v };
@@ -5880,12 +5929,12 @@ function contEvaluar(c, datos, fecha){
   const raw = contForm[c.id];
   if(raw === undefined || String(raw).trim() === '') return { estado: 'vacio', texto: textoAnt, valor: null };
   const v = contParseNum(raw);
-  if(isNaN(v)) return { estado: 'bad', texto: 'Escribí solo números (con coma para decimales)', valor: null };
+  if(isNaN(v)) return { estado: 'bad', texto: 'Escribí solo números (coma o punto para los decimales, sin separar los miles)', valor: null };
   const cifras = n => String(Math.floor(Math.abs(n))).length;
   if(c.acum && ant && ant[1] >= 1000 && cifras(v) !== cifras(ant[1]))
-    return { estado: 'warn', tipo: 'cifras', texto: `⚠️ Tiene ${cifras(v)} cifras y la anterior ${cifras(ant[1])} (${contFmt(ant[1])}). ¿Falta o sobra un dígito?`, valor: v };
+    return { estado: 'warn', tipo: 'cifras', texto: `⚠️ Tiene ${cifras(v)} cifras y la anterior ${cifras(ant[1])} (${contFmtC(c, ant[1])}). ¿Falta o sobra un dígito?`, valor: v };
   const ruido = (CONT_FICHA[c.id] || {}).ruido;
-  if(c.acum && ant && v < ant[1] && !(ruido && ant[1] - v <= Math.max(5, ant[1] * 0.01))) return { estado: 'warn', tipo: 'baja', texto: `⚠️ Menor que la anterior (${contFmt(ant[1])}). ¿Se reinició o cambió el contador?`, valor: v };
+  if(c.acum && ant && v < ant[1] && !(ruido && ant[1] - v <= Math.max(5, ant[1] * 0.01))) return { estado: 'warn', tipo: 'baja', texto: `⚠️ Menor que la anterior (${contFmtC(c, ant[1])}). ¿Se reinició o cambió el contador?`, valor: v };
   if(ant){
     const dif = v - ant[1];
     const dias = Math.max(1, contDias(ant[0], fecha));
@@ -5913,11 +5962,11 @@ function contActualizarHints(){
     const ev = contEvaluar(c, datos, fecha);
     const inp = row.querySelector('input');
     const hint = row.querySelector('.cont-hint');
-    hint.textContent = ev.texto;
+    hint.textContent = (!c.derivado && ev.valor !== null ? 'Se lee: ' + contFmtC(c, ev.valor) + ' · ' : '') + ev.texto;
     hint.className = 'cont-hint' + (ev.estado === 'warn' || ev.estado === 'bad' ? ' ' + ev.estado : '');
     inp.classList.toggle('warn', ev.estado === 'warn');
     inp.classList.toggle('bad', ev.estado === 'bad');
-    if(c.derivado) inp.value = ev.valor === null ? '' : contFmt(ev.valor).replace(/\./g, '').replace(',', '.');
+    if(c.derivado) inp.value = ev.valor === null ? '' : contFmt(ev.valor);
   });
 }
 
@@ -5936,7 +5985,7 @@ function contGuardarLecturas(){
     const ev = contEvaluar(c, datos, fecha);
     if(ev.estado === 'bad'){ showToast('Revisá "' + c.nombre + '": escribí solo números.'); return; }
     if(ev.estado === 'vacio' || ev.valor === null) continue;
-    if(ev.estado === 'warn') avisos.push('• ' + c.nombre + ' (' + c.grp + '): ' + contFmt(ev.valor) + ' · ' + (TIPOS[ev.tipo] || 'revisar') + ' (anterior ' + contFmt(contAnterior(datos, c.id, fecha)[1]) + ')');
+    if(ev.estado === 'warn') avisos.push('• ' + c.nombre + ' (' + c.grp + '): ' + contFmtC(c, ev.valor) + ' · ' + (TIPOS[ev.tipo] || 'revisar') + ' (anterior ' + contFmtC(c, contAnterior(datos, c.id, fecha)[1]) + ')');
     lecturas.push({ id: c.id, valor: ev.valor, obs: ev.estado === 'warn' ? 'confirmada con aviso: ' + (TIPOS[ev.tipo] || 'revisar') : '' });
   }
   const h4Txt = document.getElementById('contClientesH4').value.trim();
@@ -5985,7 +6034,7 @@ function contRenderConsumos(){
         if(!arr.length) return;
         const ult = arr[arr.length - 1];
         if(!c.acum || arr.length < 2){
-          filas += `<tr><td>${escapeHtml(c.nombre)}</td><td class="num">${contFmt(ult[1])}<br><span class="cont-unit">${contFmtFecha(ult[0])}</span></td><td class="num">—</td><td class="num">—</td></tr>`;
+          filas += `<tr><td>${escapeHtml(c.nombre)}</td><td class="num">${contFmtC(c, ult[1])}<br><span class="cont-unit">${contFmtFecha(ult[0])}</span></td><td class="num">—</td><td class="num">—</td></tr>`;
           return;
         }
         const pen = arr[arr.length - 2];
@@ -6052,7 +6101,13 @@ document.getElementById('contLinkSaveBtn').addEventListener('click', () => {
   contSincronizar(true);
 });
 
-document.getElementById('contFecha').addEventListener('change', contActualizarHints);
+document.getElementById('contFecha').addEventListener('change', () => { contRenderLecturas(); });
+document.getElementById('contFaltanBtn').addEventListener('click', () => { contSoloFaltan = !contSoloFaltan; contRenderLecturas(); });
+document.getElementById('contVolverBtn').addEventListener('click', () => {
+  const sinGuardar = Object.keys(contForm).some(k => String(contForm[k]).trim() !== '');
+  if(sinGuardar && !confirm('Hay lecturas escritas que todavía no guardaste. ¿Salir igual?')) return;
+  document.getElementById('backToFloorsBtn').click();
+});
 document.getElementById('contGuardarBtn').addEventListener('click', contGuardarLecturas);
 document.getElementById('contSyncBtn').addEventListener('click', () => contSincronizar(true));
 document.querySelectorAll('.cont-tab').forEach(b => b.addEventListener('click', () => contActivarTab(b.dataset.ctab)));
@@ -6129,6 +6184,16 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.32',
+    date: '2026-11-11',
+    changes: [
+      'Contadores: los números se ven con puntos de miles (1.234.567) y coma decimal; se puede escribir con coma o con punto.',
+      'Contadores en GWh (Centro de Convenciones, Hotel 4* y 5*): se muestran como el medidor, con 4 decimales por debajo de 10 y 3 decimales desde 10.',
+      'Nuevo botón "Ver solo los que faltan" para completar más tarde los contadores que no se pudieron leer (por ejemplo masajes).',
+      'Botón "Volver" junto a "Guardar lecturas".',
+    ]
+  },
   {
     version: 'v1.31',
     date: '2026-11-08',
