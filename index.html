@@ -5799,7 +5799,8 @@ function showContadoresScreen(){
   const f = document.getElementById('contFecha');
   const hoy = contHoyIso();
   f.max = hoy;
-  if(!f.value) f.value = hoy;
+  // Si la fecha la puso la app (no la cambió una persona), se actualiza al día de hoy aunque la app haya quedado abierta de ayer.
+  if(!f.value || contFechaAuto){ f.value = hoy; contFechaAuto = true; }
   const vb = document.getElementById('contVolverBtn');
   if(vb) vb.style.display = (currentUser && currentUser.soloContadores) ? 'none' : 'inline-flex';
   contActualizarChip();
@@ -5834,6 +5835,7 @@ function contSecciones(){
   return orden;
 }
 
+let contFechaAuto = true;     // true = la fecha de la lectura es la automática (hoy), no una elegida a mano
 let contSoloFaltan = false;   // true = mostrar solo los contadores sin lectura en la fecha elegida
 function contRenderLecturas(){
   const cont = document.getElementById('contLecturasLista');
@@ -5997,6 +5999,7 @@ function contGuardarLecturas(){
     clientes = { h4, h5 };
   }
   if(!lecturas.length && !clientes){ showToast('No hay nada para guardar todavía.'); return; }
+  if(fecha !== contHoyIso() && !confirm('La fecha de estas lecturas es ' + contFmtFecha(fecha) + '/' + fecha.slice(0, 4) + ' y hoy es ' + contFmtFecha(contHoyIso()) + '/' + contHoyIso().slice(0, 4) + '.\n\n¿Querés guardarlas con esa fecha? Si no, tocá Cancelar y cambiá la fecha.')) return;
   if(avisos.length && !confirm('Estas lecturas parecen raras:\n\n' + avisos.join('\n') + '\n\n¿Están bien así? Si hay un error de tipeo, tocá Cancelar y corregí.')) return;
 
   const lote = { lote: contNuevoLote(), fecha, usuario: currentUser ? currentUser.name : '', lecturas };
@@ -6101,7 +6104,17 @@ document.getElementById('contLinkSaveBtn').addEventListener('click', () => {
   contSincronizar(true);
 });
 
-document.getElementById('contFecha').addEventListener('change', () => { contRenderLecturas(); });
+document.getElementById('contFecha').addEventListener('change', () => {
+  contFechaAuto = (document.getElementById('contFecha').value === contHoyIso());
+  contRenderLecturas();
+});
+// Si la tablet estuvo guardada de un día para otro, al volver a abrir la app se pone la fecha de hoy.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible' || !contPantallaVisible()) return;
+  const f = document.getElementById('contFecha'), hoy = contHoyIso();
+  f.max = hoy;
+  if(contFechaAuto && f.value !== hoy){ f.value = hoy; contRenderLecturas(); }
+});
 document.getElementById('contFaltanBtn').addEventListener('click', () => { contSoloFaltan = !contSoloFaltan; contRenderLecturas(); });
 document.getElementById('contVolverBtn').addEventListener('click', () => {
   const sinGuardar = Object.keys(contForm).some(k => String(contForm[k]).trim() !== '');
@@ -6184,6 +6197,13 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.33',
+    date: '2026-11-12',
+    changes: [
+      'Contadores: la fecha de la lectura se actualiza sola al día de hoy aunque la app haya quedado abierta de ayer, y si guardás con una fecha que no es hoy te pide confirmar.',
+    ]
+  },
   {
     version: 'v1.32',
     date: '2026-11-11',
