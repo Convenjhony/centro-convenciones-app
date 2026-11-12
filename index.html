@@ -5872,7 +5872,10 @@ function contRenderLecturas(){
   cont.innerHTML = html;
   cont.querySelectorAll('input.cont-input:not([readonly])').forEach(inp => {
     inp.addEventListener('input', () => { contForm[inp.dataset.cid] = inp.value; contActualizarHints(); });
-    inp.addEventListener('focus', () => { if(contForm[inp.dataset.cid] !== undefined) inp.value = contForm[inp.dataset.cid]; });
+    inp.addEventListener('focus', () => {
+      if(contForm[inp.dataset.cid] !== undefined) inp.value = contForm[inp.dataset.cid];
+      setTimeout(() => { try{ inp.select(); }catch(e){} }, 0);   // al tocar la casilla queda todo seleccionado: lo que escribas reemplaza
+    });
     inp.addEventListener('blur', () => contMostrarConMiles(inp));
   });
   cont.querySelectorAll('input.cont-input:not([readonly])').forEach(contMostrarConMiles);
@@ -5930,9 +5933,23 @@ function contEvaluar(c, datos, fecha){
   }
   const raw = contForm[c.id];
   if(raw === undefined || String(raw).trim() === '') return { estado: 'vacio', texto: textoAnt, valor: null };
-  const v = contParseNum(raw);
+  let v = contParseNum(raw);
   if(isNaN(v)) return { estado: 'bad', texto: 'Escribí solo números (coma o punto para los decimales, sin separar los miles)', valor: null };
+  // Medidores en GWh: si se escribieron los dígitos sin coma ("22473"), se coloca la coma como la muestra el medidor
+  // (3 decimales desde 10, 4 decimales por debajo de 10), eligiendo la opción más cercana a la lectura anterior.
+  let interpretado = '';
+  if(c.fk && /^\d{3,}$/.test(String(raw).trim())){
+    const dig = String(raw).trim();
+    const cand = [];
+    for(let k = 1; k < dig.length; k++) cand.push(Number(dig.slice(0, k) + '.' + dig.slice(k)));
+    let elegido = null;
+    if(ant && ant[1] > 0) elegido = cand.reduce((m, x) => Math.abs(Math.log(x / ant[1])) < Math.abs(Math.log(m / ant[1])) ? x : m);
+    else { const k = (dig.length >= 2 && Number(dig.slice(0, 2)) >= 10) ? 2 : 1; elegido = Number(dig.slice(0, k) + '.' + dig.slice(k)); }
+    if(elegido !== null && isFinite(elegido)){ v = elegido; interpretado = 'Escribiste ' + dig + ' → se tomó ' + contFmtGwh(v) + ' (el medidor lleva coma). '; }
+  }
   const cifras = n => String(Math.floor(Math.abs(n))).length;
+  if(c.acum && ant && ant[1] > 0 && v >= ant[1] * 5)
+    return { estado: 'warn', tipo: 'escala', texto: `⚠️ Es mucho mayor que la anterior (${contFmtC(c, ant[1])}). ¿Sobra un dígito o falta la coma o el punto?`, valor: v };
   if(c.acum && ant && ant[1] >= 1000 && cifras(v) !== cifras(ant[1]))
     return { estado: 'warn', tipo: 'cifras', texto: `⚠️ Tiene ${cifras(v)} cifras y la anterior ${cifras(ant[1])} (${contFmtC(c, ant[1])}). ¿Falta o sobra un dígito?`, valor: v };
   const ruido = (CONT_FICHA[c.id] || {}).ruido;
@@ -5942,15 +5959,17 @@ function contEvaluar(c, datos, fecha){
     const dias = Math.max(1, contDias(ant[0], fecha));
     if(c.acum){
       const ritmo = contRitmo(datos, c.id);
+      if(ritmo === null && ant[1] >= 1000 && dif > ant[1] * 0.1)
+        return { estado: 'warn', tipo: 'salto', texto: `⚠️ Salto de +${contFmt(dif * (c.fk || 1))} desde la anterior (${contFmtC(c, ant[1])}). Revisá que no haya un dígito mal.`, valor: v };
       if(ritmo !== null){
         const esperado = ritmo * dias;
         if(dif > Math.max(esperado * 4, Math.abs(ant[1]) * 0.003))
           return { estado: 'warn', tipo: 'salto', texto: `⚠️ Salto grande: +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s); lo normal es hasta unos ${contFmt(esperado * (c.fk || 1))}. Revisá la lectura.`, valor: v };
       }
     }
-    return { estado: 'ok', texto: `${textoAnt} · +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s)`, valor: v };
+    return { estado: 'ok', texto: `${interpretado}${textoAnt} · +${contFmt(dif * (c.fk || 1))}${c.fk ? ' kWh' : ''} en ${dias} día(s)`, valor: v };
   }
-  return { estado: 'ok', texto: textoAnt, valor: v };
+  return { estado: 'ok', texto: interpretado + textoAnt, valor: v };
 }
 
 function contActualizarHints(){
@@ -5982,7 +6001,7 @@ function contGuardarLecturas(){
   const datos = contDatos();
   const lecturas = [];
   const avisos = [];
-  const TIPOS = { baja:'menor que la anterior', cifras:'cantidad de cifras distinta', salto:'salto grande' };
+  const TIPOS = { baja:'menor que la anterior', cifras:'cantidad de cifras distinta', salto:'salto grande', escala:'mucho mayor que la anterior' };
   for(const c of CONT_CATALOGO){
     const ev = contEvaluar(c, datos, fecha);
     if(ev.estado === 'bad'){ showToast('Revisá "' + c.nombre + '": escribí solo números.'); return; }
@@ -6197,6 +6216,15 @@ initSession();
 // en Configuración → Historial de cambios.
 // =====================================================================
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.34',
+    date: '2026-11-12',
+    changes: [
+      'Contadores en GWh: si se escriben los dígitos sin coma (22473) la app coloca la coma como la muestra el medidor (22,473) y lo avisa.',
+      'Nuevos avisos al cargar: valor mucho mayor que el anterior (falta o sobra una coma o un dígito) y salto de más de 10% en un día cuando todavía hay pocas lecturas.',
+      'Al tocar una casilla de lectura queda todo seleccionado para escribir encima.',
+    ]
+  },
   {
     version: 'v1.33',
     date: '2026-11-12',
